@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/SolomonRosemite/Mixify/internal/untils/mixify"
-	"github.com/SolomonRosemite/Mixify/internal/untils/spotify"
+	"github.com/SolomonRosemite/Mixify/internal/utils/mixify"
+	"github.com/SolomonRosemite/Mixify/internal/utils/spotify"
 )
 
 func main() {
