@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"log"
@@ -13,7 +13,7 @@ import (
 
 const defaultPort = "8080"
 
-func main() {
+func StartServer() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = defaultPort
