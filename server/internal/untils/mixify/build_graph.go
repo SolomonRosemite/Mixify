@@ -1,8 +1,12 @@
 package mixify
 
-import "fmt"
+import (
+	"fmt"
 
-func CreateMixStackGraph() {
+	"github.com/zmb3/spotify/v2"
+)
+
+func CreateMixStackGraph(client *spotify.Client) {
 	fmt.Println("Hi")
 
 	// build graph here...

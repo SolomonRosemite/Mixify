@@ -1,7 +1,14 @@
 package main
 
-import "github.com/SolomonRosemite/Mixify/internal/untils/mixify"
+import (
+	"github.com/SolomonRosemite/Mixify/internal/untils/mixify"
+	"github.com/SolomonRosemite/Mixify/internal/untils/spotify"
+)
 
 func main() {
-	mixify.CreateMixStackGraph()
+	client, err := spotify.AuthenticateUser()
+	if err != nil {
+		panic(err)
+	}
+	mixify.CreateMixStackGraph(client)
 }
