@@ -6,72 +6,91 @@ import (
 	"github.com/SolomonRosemite/Mixify/internal/models"
 )
 
+type playlistNode struct {
+	PlaylistId       uint64
+	TempPlaylistName string
+	ChildrenNodes    *[]*playlistNode
+}
+
 // func CreateMixStackGraph(client *spotify.Client) {
 func CreateMixStackGraph() {
 	playlists, associations := createTestData()
+	start(playlists, associations)
+}
 
+func start(playlists *[]models.PlaylistSnapshot, associations *[]models.PlaylistAssociationSnapshot) {
 	playlistIds := make([]uint64, len(*playlists))
 	for i, playlist := range *playlists {
 		playlistIds[i] = playlist.Id
 	}
 
-	start(&playlistIds, associations)
+	topLevelPlaylistIds := getAllTopLevelPlaylistIds(&playlistIds, associations)
+	nodes := createDependencyGraph(&topLevelPlaylistIds, associations)
+
+	for _, n := range *nodes {
+		setPlaylistNames(playlists, n)
+	}
+
+	CreatePrettyGraph(playlistNode{PlaylistId: ^uint64(0), TempPlaylistName: "__root", ChildrenNodes: nodes})
 }
 
-func start(playlistIds *[]uint64, associations *[]models.PlaylistAssociationSnapshot) {
-	topLevelPlaylistIds := getAllTopLevelPlaylistIds(playlistIds, associations)
-	list := createDependencyLists(&topLevelPlaylistIds, associations)
-	createDependencyListToGraph(list)
+func setPlaylistNames(playlists *[]models.PlaylistSnapshot, n *playlistNode) {
+	for _, p := range *playlists {
+		if p.Id == n.PlaylistId {
+			n.TempPlaylistName = p.TempTestName
+			break
+		}
+	}
+
+	if n.ChildrenNodes == nil {
+		return
+	}
+
+	for _, n := range *n.ChildrenNodes {
+		setPlaylistNames(playlists, n)
+	}
 }
 
-func createDependencyListToGraph(list *[][][]uint64) {
-
-}
-
-func createDependencyLists(topLevelPlaylistIds *[]uint64, associations *[]models.PlaylistAssociationSnapshot) *[][][]uint64 {
-	result := [][][]uint64{}
+func createDependencyGraph(topLevelPlaylistIds *[]uint64, associations *[]models.PlaylistAssociationSnapshot) *[]*playlistNode {
+	result := []*playlistNode{}
 
 	fmt.Printf("number of top level playlists: %v\n", len(*topLevelPlaylistIds))
 	for _, id := range *topLevelPlaylistIds {
-		fmt.Printf("starting with top level playlist id: %v\n", id)
-		res := createSingleDependencyList(id, associations, []uint64{})
-		fmt.Printf("%v\n", res)
-		result = append(result, res)
-		fmt.Println("-----------------------------")
+		fmt.Printf("processing top level playlist with id: %v\n", id)
+		res := createDependencyGraphForNode(playlistNode{PlaylistId: id}, associations, []uint64{})
+		result = append(result, &res)
 	}
 
 	return &result
 }
 
-func createSingleDependencyList(playlistId uint64, associations *[]models.PlaylistAssociationSnapshot, visitedPlaylistIds []uint64) [][]uint64 {
-	if nodeIsAlreadyVisited(playlistId, visitedPlaylistIds) {
-		errorString := fmt.Sprintf("Circular playlist dependency detected. Tried to build playlist with id: %v.", playlistId)
+func createDependencyGraphForNode(node playlistNode, associations *[]models.PlaylistAssociationSnapshot, visitedPlaylistIds []uint64) playlistNode {
+	if nodeIsAlreadyVisited(node, visitedPlaylistIds) {
+		errorString := fmt.Sprintf("Circular playlist dependency detected. Tried to build playlist with id: %v.", node)
 		panic(errorString)
 	}
 
-	didFindChildren := false
-	visitedPlaylistIds = append(visitedPlaylistIds, playlistId)
-	returnVal := [][]uint64{}
+	visitedPlaylistIds = append(visitedPlaylistIds, node.PlaylistId)
 
 	// If we have children, dfs these...
 	for _, a := range *associations {
-		if *a.ParentPlaylistId == playlistId {
-			didFindChildren = true
-			res := createSingleDependencyList(*a.ChildPlaylistId, associations, visitedPlaylistIds)
-			returnVal = append(returnVal, res...)
+		if *a.ParentPlaylistId == node.PlaylistId {
+			res := createDependencyGraphForNode(playlistNode{PlaylistId: *a.ChildPlaylistId}, associations, visitedPlaylistIds)
+			visitedPlaylistIds = append(visitedPlaylistIds, *a.ChildPlaylistId)
+
+			if node.ChildrenNodes == nil {
+				node.ChildrenNodes = &[]*playlistNode{}
+			}
+			*node.ChildrenNodes = append(*node.ChildrenNodes, &res)
 		}
 	}
 
-	if !didFindChildren {
-		returnVal = append(returnVal, visitedPlaylistIds)
-	}
-
-	return returnVal
+	return node
 }
 
-func nodeIsAlreadyVisited(playlistId uint64, visitedPlaylistIds []uint64) bool {
+func nodeIsAlreadyVisited(node playlistNode, visitedPlaylistIds []uint64) bool {
 	for _, a := range visitedPlaylistIds {
-		if a == playlistId {
+		if a == node.PlaylistId {
 			return true
 		}
 	}
@@ -196,7 +215,7 @@ func createTestData() (*[]models.PlaylistSnapshot, *[]models.PlaylistAssociation
 		},
 		{
 			Id:           7,
-			TempTestName: "Copy of \"Second best lofi playlist eu\" as test",
+			TempTestName: "Copy of Second best lofi playlist eu as test",
 			IsMixStack:   true,
 			Associations: literalToPtr([]models.PlaylistAssociationSnapshot{playlistAssociations[5:6][0]}),
 		},
