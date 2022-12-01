@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/SolomonRosemite/Mixify/internal/models"
+	"github.com/SolomonRosemite/Mixify/internal/utils/common"
 	"github.com/zmb3/spotify/v2"
 )
 
@@ -44,6 +45,7 @@ func getOrCreateSpotifyPlaylists(client *spotify.Client, user *spotify.PrivateUs
 		}
 
 		spotifyPlaylists[i] = spotifyPlaylist
+		(*playlists)[i].SpotifyPlaylistId = common.LiteralToPtr(spotifyPlaylist.ID.String())
 	}
 
 	return &spotifyPlaylists, nil
