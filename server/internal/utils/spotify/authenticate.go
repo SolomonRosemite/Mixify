@@ -20,7 +20,7 @@ var err = godotenv.Load("dev.env")
 var redirectURI = os.Getenv("SPOTIFY_REDIRECT_URI")
 
 var (
-	auth  = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopeUserReadPrivate))
+	auth  = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopePlaylistModifyPrivate))
 	ch    = make(chan *spotify.Client)
 	state = "abc123"
 )
