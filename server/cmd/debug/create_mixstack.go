@@ -21,8 +21,8 @@ func main() {
 	}
 }
 
-func createTestData() (*[]models.PlaylistSnapshot, *[]models.PlaylistAssociationSnapshot) {
-	playlistAssociations := []models.PlaylistAssociationSnapshot{
+func createTestData() (*[]*models.PlaylistSnapshot, *[]*models.PlaylistAssociationSnapshot) {
+	playlistAssociations := []*models.PlaylistAssociationSnapshot{
 		// Random -> Second best lofi playlist eu
 		{
 			Id:               0,
@@ -67,7 +67,7 @@ func createTestData() (*[]models.PlaylistSnapshot, *[]models.PlaylistAssociation
 		},
 	}
 
-	playlists := []models.PlaylistSnapshot{
+	playlists := []*models.PlaylistSnapshot{
 		{
 			Id:                0,
 			TempTestName:      "Random",
@@ -101,28 +101,28 @@ func createTestData() (*[]models.PlaylistSnapshot, *[]models.PlaylistAssociation
 			TempTestName:      "Generic Lofi",
 			IsMixStack:        true,
 			SpotifyPlaylistId: literalToPtr("3eO9NoZl7ZWL8w4k0TEPmH"),
-			Associations:      literalToPtr([]models.PlaylistAssociationSnapshot{playlistAssociations[1:2][0], playlistAssociations[2:3][0], playlistAssociations[4:5][0], playlistAssociations[5:6][0]}),
+			Associations:      literalToPtr([]*models.PlaylistAssociationSnapshot{playlistAssociations[1:2][0], playlistAssociations[2:3][0], playlistAssociations[4:5][0], playlistAssociations[5:6][0]}),
 		},
 		{
 			Id:                5,
 			TempTestName:      "Best lofi playlist eu",
 			IsMixStack:        true,
 			SpotifyPlaylistId: literalToPtr("1R0FUfQtxf77TMdDnvAt3F"),
-			Associations:      literalToPtr([]models.PlaylistAssociationSnapshot{playlistAssociations[3:4][0], playlistAssociations[5:6][0]}),
+			Associations:      literalToPtr([]*models.PlaylistAssociationSnapshot{playlistAssociations[3:4][0], playlistAssociations[5:6][0]}),
 		},
 		{
 			Id:                6,
 			TempTestName:      "Second best lofi playlist eu",
 			IsMixStack:        true,
 			SpotifyPlaylistId: literalToPtr("68JQu6CnTN0v4naDCqeMA4"),
-			Associations:      literalToPtr([]models.PlaylistAssociationSnapshot{playlistAssociations[0:1][0], playlistAssociations[4:5][0], playlistAssociations[5:6][0]}),
+			Associations:      literalToPtr([]*models.PlaylistAssociationSnapshot{playlistAssociations[0:1][0], playlistAssociations[4:5][0], playlistAssociations[5:6][0]}),
 		},
 		{
 			Id:                7,
 			TempTestName:      "Copy of Second best lofi playlist eu as test",
 			IsMixStack:        true,
 			SpotifyPlaylistId: literalToPtr("4VdGOfXEmarZwj0q0oX25g"),
-			Associations:      literalToPtr([]models.PlaylistAssociationSnapshot{playlistAssociations[6:7][0]}),
+			Associations:      literalToPtr([]*models.PlaylistAssociationSnapshot{playlistAssociations[6:7][0]}),
 		},
 	}
 

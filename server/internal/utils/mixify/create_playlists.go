@@ -9,7 +9,7 @@ import (
 	"github.com/zmb3/spotify/v2"
 )
 
-func CreateOrUpdatePlaylists(client *spotify.Client, nodes *[]*playlistNode, playlists *[]models.PlaylistSnapshot) (any, error) {
+func CreateOrUpdatePlaylists(client *spotify.Client, nodes *[]*playlistNode, playlists *[]*models.PlaylistSnapshot) (any, error) {
 	user, err := client.CurrentUser(context.Background())
 	if err != nil {
 		return nil, err
@@ -25,14 +25,14 @@ func CreateOrUpdatePlaylists(client *spotify.Client, nodes *[]*playlistNode, pla
 	return "tbd", nil
 }
 
-func getOrCreateSpotifyPlaylists(client *spotify.Client, user *spotify.PrivateUser, playlists *[]models.PlaylistSnapshot) (*[]*spotify.FullPlaylist, error) {
+func getOrCreateSpotifyPlaylists(client *spotify.Client, user *spotify.PrivateUser, playlists *[]*models.PlaylistSnapshot) (*[]*spotify.FullPlaylist, error) {
 	spotifyPlaylists := make([]*spotify.FullPlaylist, len(*playlists))
 	for i := 0; i < len(*playlists); i++ {
 		var spotifyPlaylist *spotify.FullPlaylist
 		var err error
 
 		if (*playlists)[i].SpotifyPlaylistId == nil {
-			spotifyPlaylist, err = createPlaylist(client, user, &(*playlists)[i], playlists)
+			spotifyPlaylist, err = createPlaylist(client, user, (*playlists)[i], playlists)
 		} else {
 			playlistId := *(*playlists)[i].SpotifyPlaylistId
 			spotifyPlaylistId := spotify.ID(playlistId)
@@ -49,7 +49,7 @@ func getOrCreateSpotifyPlaylists(client *spotify.Client, user *spotify.PrivateUs
 	return &spotifyPlaylists, nil
 }
 
-func createPlaylist(client *spotify.Client, user *spotify.PrivateUser, playlist *models.PlaylistSnapshot, playlists *[]models.PlaylistSnapshot) (*spotify.FullPlaylist, error) {
+func createPlaylist(client *spotify.Client, user *spotify.PrivateUser, playlist *models.PlaylistSnapshot, playlists *[]*models.PlaylistSnapshot) (*spotify.FullPlaylist, error) {
 	var sb strings.Builder
 	sb.WriteString("Generated mixstack using mixify. This playlist consists of:")
 

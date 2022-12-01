@@ -6,7 +6,7 @@ type PlaylistSnapshot struct {
 	IsMixStack        bool
 	SpotifyPlaylistId *string
 	PlaylistsOrder    *string
-	Associations      *[]PlaylistAssociationSnapshot
+	Associations      *[]*PlaylistAssociationSnapshot
 }
 
 type PlaylistAssociationSnapshot struct {
