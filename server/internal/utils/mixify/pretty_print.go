@@ -14,7 +14,7 @@ func CreatePrettyGraph(startingNode playlistNode) {
 	createVertices(&startingNode, g)
 	createEdges(&startingNode, g)
 
-	file, _ := os.Create("my-graph.gv")
+	file, _ := os.Create("graph.gv")
 	_ = draw.DOT(g, file)
 }
 
