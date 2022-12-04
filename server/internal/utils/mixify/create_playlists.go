@@ -32,10 +32,10 @@ func getOrCreateSpotifyPlaylists(client *spotify.Client, user *spotify.PrivateUs
 		var spotifyPlaylist *spotify.FullPlaylist
 		var err error
 
-		if (*playlists)[i].SpotifyPlaylistId == nil {
+		if (*playlists)[i].SpotifyPlaylistID == nil {
 			spotifyPlaylist, err = createPlaylist(client, user, (*playlists)[i], playlists)
 		} else {
-			playlistId := *(*playlists)[i].SpotifyPlaylistId
+			playlistId := *(*playlists)[i].SpotifyPlaylistID
 			spotifyPlaylistId := spotify.ID(playlistId)
 			spotifyPlaylist, err = client.GetPlaylist(context.Background(), spotifyPlaylistId)
 		}
@@ -45,7 +45,7 @@ func getOrCreateSpotifyPlaylists(client *spotify.Client, user *spotify.PrivateUs
 		}
 
 		spotifyPlaylists[i] = spotifyPlaylist
-		(*playlists)[i].SpotifyPlaylistId = common.LiteralToPtr(spotifyPlaylist.ID.String())
+		(*playlists)[i].SpotifyPlaylistID = common.LiteralToPtr(spotifyPlaylist.ID.String())
 	}
 
 	return &spotifyPlaylists, nil
@@ -59,7 +59,7 @@ func createPlaylist(client *spotify.Client, user *spotify.PrivateUser, playlist 
 		var playlistName *string
 
 		for _, p := range *playlists {
-			if p.Id == *a.ChildPlaylistId {
+			if p.ID == *a.ChildPlaylistID {
 				playlistName = &p.TempTestName
 				break
 			}

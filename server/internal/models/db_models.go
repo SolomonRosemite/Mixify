@@ -1,16 +1,18 @@
 package models
 
+import "gorm.io/gorm"
+
 type PlaylistSnapshot struct {
-	Id                uint
+	gorm.Model
 	TempTestName      string
 	IsMixStack        bool
-	SpotifyPlaylistId *string
+	SpotifyPlaylistID *string
 	PlaylistsOrder    *string
 	Associations      *[]*PlaylistAssociationSnapshot
 }
 
 type PlaylistAssociationSnapshot struct {
-	Id               uint
-	ChildPlaylistId  *uint
-	ParentPlaylistId *uint
+	gorm.Model
+	ChildPlaylistID  *uint
+	ParentPlaylistID *uint
 }

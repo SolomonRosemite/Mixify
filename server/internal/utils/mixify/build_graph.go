@@ -19,7 +19,7 @@ func CreateMixStackGraph(playlists *[]*models.PlaylistSnapshot, associations *[]
 func buildGraph(playlists *[]*models.PlaylistSnapshot, associations *[]*models.PlaylistAssociationSnapshot) *[]*playlistNode {
 	playlistIds := make([]uint, len(*playlists))
 	for i, playlist := range *playlists {
-		playlistIds[i] = playlist.Id
+		playlistIds[i] = playlist.ID
 	}
 
 	topLevelPlaylistIds := getAllTopLevelPlaylistIds(&playlistIds, associations)
@@ -36,7 +36,7 @@ func buildGraph(playlists *[]*models.PlaylistSnapshot, associations *[]*models.P
 
 func setPlaylistNames(playlists *[]*models.PlaylistSnapshot, n *playlistNode) {
 	for _, p := range *playlists {
-		if p.Id == n.PlaylistId {
+		if p.ID == n.PlaylistId {
 			n.TempPlaylistName = p.TempTestName
 			break
 		}
@@ -74,9 +74,9 @@ func createDependencyGraphForNode(node playlistNode, associations *[]*models.Pla
 
 	// If we have children, dfs these...
 	for _, a := range *associations {
-		if *a.ParentPlaylistId == node.PlaylistId {
-			res := createDependencyGraphForNode(playlistNode{PlaylistId: *a.ChildPlaylistId}, associations, visitedPlaylistIds)
-			visitedPlaylistIds = append(visitedPlaylistIds, *a.ChildPlaylistId)
+		if *a.ParentPlaylistID == node.PlaylistId {
+			res := createDependencyGraphForNode(playlistNode{PlaylistId: *a.ChildPlaylistID}, associations, visitedPlaylistIds)
+			visitedPlaylistIds = append(visitedPlaylistIds, *a.ChildPlaylistID)
 
 			if node.ChildrenNodes == nil {
 				node.ChildrenNodes = &[]*playlistNode{}
@@ -104,10 +104,10 @@ func getAllTopLevelPlaylistIds(playlistIds *[]uint, associations *[]*models.Play
 		isChild := false
 
 		for _, a := range *associations {
-			if *a.ChildPlaylistId == id {
+			if *a.ChildPlaylistID == id {
 				isChild = true
 			}
-			if *a.ParentPlaylistId == id {
+			if *a.ParentPlaylistID == id {
 				isParent = true
 			}
 		}
