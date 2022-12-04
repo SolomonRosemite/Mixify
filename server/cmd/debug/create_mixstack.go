@@ -27,44 +27,44 @@ func createTestData() (*[]*models.PlaylistSnapshot, *[]*models.PlaylistAssociati
 		// Random -> Second best lofi playlist eu
 		{
 			Id:               0,
-			ChildPlaylistId:  common.LiteralToPtr[uint64](0),
-			ParentPlaylistId: common.LiteralToPtr[uint64](6),
+			ChildPlaylistId:  common.LiteralToPtr[uint](0),
+			ParentPlaylistId: common.LiteralToPtr[uint](6),
 		},
 		// Lofi Vibes -> Generic Lofi
 		{
 			Id:               1,
-			ChildPlaylistId:  common.LiteralToPtr[uint64](1),
-			ParentPlaylistId: common.LiteralToPtr[uint64](4),
+			ChildPlaylistId:  common.LiteralToPtr[uint](1),
+			ParentPlaylistId: common.LiteralToPtr[uint](4),
 		},
 		// Lofi Bangers -> Generic Lofi
 		{
 			Id:               2,
-			ChildPlaylistId:  common.LiteralToPtr[uint64](2),
-			ParentPlaylistId: common.LiteralToPtr[uint64](4),
+			ChildPlaylistId:  common.LiteralToPtr[uint](2),
+			ParentPlaylistId: common.LiteralToPtr[uint](4),
 		},
 		// Top 30 Lofi songs -> Best lofi playlist eu
 		{
 			Id:               3,
-			ChildPlaylistId:  common.LiteralToPtr[uint64](3),
-			ParentPlaylistId: common.LiteralToPtr[uint64](5),
+			ChildPlaylistId:  common.LiteralToPtr[uint](3),
+			ParentPlaylistId: common.LiteralToPtr[uint](5),
 		},
 		// Generic lofi -> Second best lofi playlist eu
 		{
 			Id:               4,
-			ChildPlaylistId:  common.LiteralToPtr[uint64](4),
-			ParentPlaylistId: common.LiteralToPtr[uint64](6),
+			ChildPlaylistId:  common.LiteralToPtr[uint](4),
+			ParentPlaylistId: common.LiteralToPtr[uint](6),
 		},
 		// Generic lofi -> Best lofi playlist eu
 		{
 			Id:               5,
-			ChildPlaylistId:  common.LiteralToPtr[uint64](4),
-			ParentPlaylistId: common.LiteralToPtr[uint64](5),
+			ChildPlaylistId:  common.LiteralToPtr[uint](4),
+			ParentPlaylistId: common.LiteralToPtr[uint](5),
 		},
 		// Second best lofi playlist eu -> Copy of Second best lofi playlist eu as test
 		{
 			Id:               6,
-			ChildPlaylistId:  common.LiteralToPtr[uint64](6),
-			ParentPlaylistId: common.LiteralToPtr[uint64](7),
+			ChildPlaylistId:  common.LiteralToPtr[uint](6),
+			ParentPlaylistId: common.LiteralToPtr[uint](7),
 		},
 	}
 

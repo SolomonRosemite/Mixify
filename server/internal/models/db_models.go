@@ -1,7 +1,7 @@
 package models
 
 type PlaylistSnapshot struct {
-	Id                uint64
+	Id                uint
 	TempTestName      string
 	IsMixStack        bool
 	SpotifyPlaylistId *string
@@ -10,7 +10,7 @@ type PlaylistSnapshot struct {
 }
 
 type PlaylistAssociationSnapshot struct {
-	Id               uint64
-	ChildPlaylistId  *uint64
-	ParentPlaylistId *uint64
+	Id               uint
+	ChildPlaylistId  *uint
+	ParentPlaylistId *uint
 }

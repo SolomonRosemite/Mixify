@@ -7,7 +7,7 @@ import (
 )
 
 type playlistNode struct {
-	PlaylistId       uint64
+	PlaylistId       uint
 	TempPlaylistName string
 	ChildrenNodes    *[]*playlistNode
 }
@@ -17,7 +17,7 @@ func CreateMixStackGraph(playlists *[]*models.PlaylistSnapshot, associations *[]
 }
 
 func buildGraph(playlists *[]*models.PlaylistSnapshot, associations *[]*models.PlaylistAssociationSnapshot) *[]*playlistNode {
-	playlistIds := make([]uint64, len(*playlists))
+	playlistIds := make([]uint, len(*playlists))
 	for i, playlist := range *playlists {
 		playlistIds[i] = playlist.Id
 	}
@@ -29,7 +29,7 @@ func buildGraph(playlists *[]*models.PlaylistSnapshot, associations *[]*models.P
 		setPlaylistNames(playlists, n)
 	}
 
-	CreatePrettyGraph(playlistNode{PlaylistId: ^uint64(0), TempPlaylistName: "__root", ChildrenNodes: nodes})
+	CreatePrettyGraph(playlistNode{PlaylistId: 0, TempPlaylistName: "__root", ChildrenNodes: nodes})
 
 	return nodes
 }
@@ -51,20 +51,20 @@ func setPlaylistNames(playlists *[]*models.PlaylistSnapshot, n *playlistNode) {
 	}
 }
 
-func createDependencyGraph(topLevelPlaylistIds *[]uint64, associations *[]*models.PlaylistAssociationSnapshot) *[]*playlistNode {
+func createDependencyGraph(topLevelPlaylistIds *[]uint, associations *[]*models.PlaylistAssociationSnapshot) *[]*playlistNode {
 	result := []*playlistNode{}
 
 	fmt.Printf("number of top level playlists: %v\n", len(*topLevelPlaylistIds))
 	for _, id := range *topLevelPlaylistIds {
 		fmt.Printf("processing top level playlist with id: %v\n", id)
-		res := createDependencyGraphForNode(playlistNode{PlaylistId: id}, associations, []uint64{})
+		res := createDependencyGraphForNode(playlistNode{PlaylistId: id}, associations, []uint{})
 		result = append(result, &res)
 	}
 
 	return &result
 }
 
-func createDependencyGraphForNode(node playlistNode, associations *[]*models.PlaylistAssociationSnapshot, visitedPlaylistIds []uint64) playlistNode {
+func createDependencyGraphForNode(node playlistNode, associations *[]*models.PlaylistAssociationSnapshot, visitedPlaylistIds []uint) playlistNode {
 	if nodeIsAlreadyVisited(node, visitedPlaylistIds) {
 		errorString := fmt.Sprintf("Circular playlist dependency detected. Tried to build playlist with id: %v.", node)
 		panic(errorString)
@@ -88,7 +88,7 @@ func createDependencyGraphForNode(node playlistNode, associations *[]*models.Pla
 	return node
 }
 
-func nodeIsAlreadyVisited(node playlistNode, visitedPlaylistIds []uint64) bool {
+func nodeIsAlreadyVisited(node playlistNode, visitedPlaylistIds []uint) bool {
 	for _, a := range visitedPlaylistIds {
 		if a == node.PlaylistId {
 			return true
@@ -97,8 +97,8 @@ func nodeIsAlreadyVisited(node playlistNode, visitedPlaylistIds []uint64) bool {
 	return false
 }
 
-func getAllTopLevelPlaylistIds(playlistIds *[]uint64, associations *[]*models.PlaylistAssociationSnapshot) []uint64 {
-	topLevelPlaylistIds := []uint64{}
+func getAllTopLevelPlaylistIds(playlistIds *[]uint, associations *[]*models.PlaylistAssociationSnapshot) []uint {
+	topLevelPlaylistIds := []uint{}
 	for _, id := range *playlistIds {
 		isParent := false
 		isChild := false
