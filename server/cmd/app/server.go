@@ -26,8 +26,6 @@ func main() {
 		panic(err)
 	}
 
-	db.AutoMigrate(&models.PlaylistAssociationSnapshot{}, &models.PlaylistSnapshot{})
-
 	if err = db.AutoMigrate(&models.PlaylistAssociationSnapshot{}, &models.PlaylistSnapshot{}); err != nil {
 		panic(err)
 	}
