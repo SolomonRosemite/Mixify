@@ -19,7 +19,7 @@ func CreatePrettyGraph(startingNode playlistNode) {
 }
 
 func createVertices(n *playlistNode, g graph.Graph[string, string]) {
-	err := g.AddVertex(n.TempPlaylistName)
+	err := g.AddVertex(n.Name)
 
 	if err != nil {
 		panic(err)
@@ -40,7 +40,7 @@ func createEdges(n *playlistNode, g graph.Graph[string, string]) {
 	}
 
 	for _, cn := range *n.ChildrenNodes {
-		_ = g.AddEdge(cn.TempPlaylistName, n.TempPlaylistName)
+		_ = g.AddEdge(cn.Name, n.Name)
 	}
 
 	for _, cn := range *n.ChildrenNodes {

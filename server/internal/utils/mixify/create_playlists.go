@@ -60,7 +60,7 @@ func createPlaylist(client *spotify.Client, user *spotify.PrivateUser, playlist 
 
 		for _, p := range *playlists {
 			if p.ID == *a.ChildPlaylistID {
-				playlistName = &p.TempTestName
+				playlistName = p.Name
 				break
 			}
 		}
@@ -70,7 +70,7 @@ func createPlaylist(client *spotify.Client, user *spotify.PrivateUser, playlist 
 	sb.WriteString(".")
 
 	playlistDescription := sb.String()
-	createdPlaylist, err := client.CreatePlaylistForUser(context.Background(), user.ID, playlist.TempTestName, playlistDescription, false, false)
+	createdPlaylist, err := client.CreatePlaylistForUser(context.Background(), user.ID, *playlist.Name, playlistDescription, false, false)
 
 	if err != nil {
 		return nil, err

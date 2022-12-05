@@ -7,9 +7,9 @@ import (
 )
 
 type playlistNode struct {
-	PlaylistId       uint
-	TempPlaylistName string
-	ChildrenNodes    *[]*playlistNode
+	PlaylistId    uint
+	Name          string
+	ChildrenNodes *[]*playlistNode
 }
 
 func CreateMixStackGraph(playlists *[]*models.PlaylistSnapshot, associations *[]*models.PlaylistAssociationSnapshot) *[]*playlistNode {
@@ -29,7 +29,7 @@ func buildGraph(playlists *[]*models.PlaylistSnapshot, associations *[]*models.P
 		setPlaylistNames(playlists, n)
 	}
 
-	CreatePrettyGraph(playlistNode{PlaylistId: 0, TempPlaylistName: "__root", ChildrenNodes: nodes})
+	CreatePrettyGraph(playlistNode{PlaylistId: 0, Name: "__root", ChildrenNodes: nodes})
 
 	return nodes
 }
@@ -37,7 +37,7 @@ func buildGraph(playlists *[]*models.PlaylistSnapshot, associations *[]*models.P
 func setPlaylistNames(playlists *[]*models.PlaylistSnapshot, n *playlistNode) {
 	for _, p := range *playlists {
 		if p.ID == n.PlaylistId {
-			n.TempPlaylistName = p.TempTestName
+			n.Name = *p.Name
 			break
 		}
 	}

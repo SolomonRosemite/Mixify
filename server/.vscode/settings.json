@@ -1,3 +1,10 @@
 {
-  "cSpell.words": ["godotenv", "gqlgen", "Mixify", "mixstack", "spotifyauth"]
+  "cSpell.words": [
+    "godotenv",
+    "gorm",
+    "gqlgen",
+    "Mixify",
+    "mixstack",
+    "spotifyauth"
+  ]
 }

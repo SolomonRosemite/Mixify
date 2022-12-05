@@ -4,15 +4,17 @@ import "gorm.io/gorm"
 
 type PlaylistSnapshot struct {
 	gorm.Model
-	TempTestName      string
-	IsMixStack        bool
+	Name              *string
+	IsMixStack        *bool
 	SpotifyPlaylistID *string
 	PlaylistsOrder    *string
-	Associations      *[]*PlaylistAssociationSnapshot
+	Associations      *[]*PlaylistAssociationSnapshot `gorm:"foreignKey:ChildPlaylistID;gorm:"foreignKey:ParentPlaylistID"`
 }
 
 type PlaylistAssociationSnapshot struct {
 	gorm.Model
 	ChildPlaylistID  *uint
 	ParentPlaylistID *uint
+	ChildPlaylist    *PlaylistSnapshot
+	ParentPlaylist   *PlaylistSnapshot
 }

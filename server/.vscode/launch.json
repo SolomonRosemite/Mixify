@@ -11,6 +11,14 @@
       "mode": "auto",
       "program": "cmd/debug/create_mixstack.go",
       "cwd": "${workspaceFolder}"
+    },
+    {
+      "name": "Run server",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "cmd/app/server.go",
+      "cwd": "${workspaceFolder}"
     }
   ]
 }
