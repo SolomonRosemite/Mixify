@@ -2,19 +2,47 @@
 
 package model
 
-type NewTodo struct {
-	Text   string `json:"text"`
-	UserID string `json:"userId"`
+type NewPlaylistAssociationSnapshot struct {
+	ChildPlaylistID  string `json:"childPlaylistId"`
+	ParentPlaylistID string `json:"parentPlaylistId"`
 }
 
-type Todo struct {
-	ID   string `json:"id"`
-	Text string `json:"text"`
-	Done bool   `json:"done"`
-	User *User  `json:"user"`
+type NewPlaylistSnapshot struct {
+	Name              string                            `json:"name"`
+	PlaylistID        string                            `json:"playlistId"`
+	SpotifyPlaylistID *string                           `json:"spotifyPlaylistId"`
+	PlaylistOrder     *string                           `json:"playlistOrder"`
+	Associations      []*NewPlaylistAssociationSnapshot `json:"associations"`
 }
 
-type User struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+type NewPlaylistSnapshotConfiguration struct {
+	Playlists []*NewPlaylistSnapshot `json:"playlists"`
+}
+
+type NewSyncLog struct {
+	SnapshotID string `json:"snapshotId"`
+}
+
+type PlaylistAssociationSnapshot struct {
+	Name             string `json:"name"`
+	ChildPlaylistID  string `json:"childPlaylistId"`
+	ParentPlaylistID string `json:"parentPlaylistId"`
+}
+
+type PlaylistSnapshot struct {
+	Name              string                         `json:"name"`
+	SpotifyPlaylistID *string                        `json:"spotifyPlaylistId"`
+	PlaylistOrder     *string                        `json:"playlistOrder"`
+	Associations      []*PlaylistAssociationSnapshot `json:"associations"`
+}
+
+type PlaylistSnapshotConfiguration struct {
+	ID        string              `json:"id"`
+	Playlists []*PlaylistSnapshot `json:"playlists"`
+}
+
+type SyncLog struct {
+	ID         string `json:"id"`
+	UserID     string `json:"userId"`
+	SnapshotID string `json:"snapshotId"`
 }

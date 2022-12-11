@@ -45,31 +45,43 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Mutation struct {
-		CreateTodo func(childComplexity int, input model.NewTodo) int
+		CreatePlaylistSnapshotConfiguration func(childComplexity int, input model.NewPlaylistSnapshotConfiguration) int
+	}
+
+	PlaylistAssociationSnapshot struct {
+		ChildPlaylistID  func(childComplexity int) int
+		Name             func(childComplexity int) int
+		ParentPlaylistID func(childComplexity int) int
+	}
+
+	PlaylistSnapshot struct {
+		Associations      func(childComplexity int) int
+		Name              func(childComplexity int) int
+		PlaylistOrder     func(childComplexity int) int
+		SpotifyPlaylistID func(childComplexity int) int
+	}
+
+	PlaylistSnapshotConfiguration struct {
+		ID        func(childComplexity int) int
+		Playlists func(childComplexity int) int
 	}
 
 	Query struct {
-		Todos func(childComplexity int) int
+		SyncLogs func(childComplexity int) int
 	}
 
-	Todo struct {
-		Done func(childComplexity int) int
-		ID   func(childComplexity int) int
-		Text func(childComplexity int) int
-		User func(childComplexity int) int
-	}
-
-	User struct {
-		ID   func(childComplexity int) int
-		Name func(childComplexity int) int
+	SyncLog struct {
+		ID         func(childComplexity int) int
+		SnapshotID func(childComplexity int) int
+		UserID     func(childComplexity int) int
 	}
 }
 
 type MutationResolver interface {
-	CreateTodo(ctx context.Context, input model.NewTodo) (*model.Todo, error)
+	CreatePlaylistSnapshotConfiguration(ctx context.Context, input model.NewPlaylistSnapshotConfiguration) (*model.PlaylistSnapshotConfiguration, error)
 }
 type QueryResolver interface {
-	Todos(ctx context.Context) ([]*model.Todo, error)
+	SyncLogs(ctx context.Context) ([]*model.SyncLog, error)
 }
 
 type executableSchema struct {
@@ -87,66 +99,108 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	_ = ec
 	switch typeName + "." + field {
 
-	case "Mutation.createTodo":
-		if e.complexity.Mutation.CreateTodo == nil {
+	case "Mutation.createPlaylistSnapshotConfiguration":
+		if e.complexity.Mutation.CreatePlaylistSnapshotConfiguration == nil {
 			break
 		}
 
-		args, err := ec.field_Mutation_createTodo_args(context.TODO(), rawArgs)
+		args, err := ec.field_Mutation_createPlaylistSnapshotConfiguration_args(context.TODO(), rawArgs)
 		if err != nil {
 			return 0, false
 		}
 
-		return e.complexity.Mutation.CreateTodo(childComplexity, args["input"].(model.NewTodo)), true
+		return e.complexity.Mutation.CreatePlaylistSnapshotConfiguration(childComplexity, args["input"].(model.NewPlaylistSnapshotConfiguration)), true
 
-	case "Query.todos":
-		if e.complexity.Query.Todos == nil {
+	case "PlaylistAssociationSnapshot.childPlaylistId":
+		if e.complexity.PlaylistAssociationSnapshot.ChildPlaylistID == nil {
 			break
 		}
 
-		return e.complexity.Query.Todos(childComplexity), true
+		return e.complexity.PlaylistAssociationSnapshot.ChildPlaylistID(childComplexity), true
 
-	case "Todo.done":
-		if e.complexity.Todo.Done == nil {
+	case "PlaylistAssociationSnapshot.name":
+		if e.complexity.PlaylistAssociationSnapshot.Name == nil {
 			break
 		}
 
-		return e.complexity.Todo.Done(childComplexity), true
+		return e.complexity.PlaylistAssociationSnapshot.Name(childComplexity), true
 
-	case "Todo.id":
-		if e.complexity.Todo.ID == nil {
+	case "PlaylistAssociationSnapshot.parentPlaylistId":
+		if e.complexity.PlaylistAssociationSnapshot.ParentPlaylistID == nil {
 			break
 		}
 
-		return e.complexity.Todo.ID(childComplexity), true
+		return e.complexity.PlaylistAssociationSnapshot.ParentPlaylistID(childComplexity), true
 
-	case "Todo.text":
-		if e.complexity.Todo.Text == nil {
+	case "PlaylistSnapshot.associations":
+		if e.complexity.PlaylistSnapshot.Associations == nil {
 			break
 		}
 
-		return e.complexity.Todo.Text(childComplexity), true
+		return e.complexity.PlaylistSnapshot.Associations(childComplexity), true
 
-	case "Todo.user":
-		if e.complexity.Todo.User == nil {
+	case "PlaylistSnapshot.name":
+		if e.complexity.PlaylistSnapshot.Name == nil {
 			break
 		}
 
-		return e.complexity.Todo.User(childComplexity), true
+		return e.complexity.PlaylistSnapshot.Name(childComplexity), true
 
-	case "User.id":
-		if e.complexity.User.ID == nil {
+	case "PlaylistSnapshot.playlistOrder":
+		if e.complexity.PlaylistSnapshot.PlaylistOrder == nil {
 			break
 		}
 
-		return e.complexity.User.ID(childComplexity), true
+		return e.complexity.PlaylistSnapshot.PlaylistOrder(childComplexity), true
 
-	case "User.name":
-		if e.complexity.User.Name == nil {
+	case "PlaylistSnapshot.spotifyPlaylistId":
+		if e.complexity.PlaylistSnapshot.SpotifyPlaylistID == nil {
 			break
 		}
 
-		return e.complexity.User.Name(childComplexity), true
+		return e.complexity.PlaylistSnapshot.SpotifyPlaylistID(childComplexity), true
+
+	case "PlaylistSnapshotConfiguration.id":
+		if e.complexity.PlaylistSnapshotConfiguration.ID == nil {
+			break
+		}
+
+		return e.complexity.PlaylistSnapshotConfiguration.ID(childComplexity), true
+
+	case "PlaylistSnapshotConfiguration.playlists":
+		if e.complexity.PlaylistSnapshotConfiguration.Playlists == nil {
+			break
+		}
+
+		return e.complexity.PlaylistSnapshotConfiguration.Playlists(childComplexity), true
+
+	case "Query.syncLogs":
+		if e.complexity.Query.SyncLogs == nil {
+			break
+		}
+
+		return e.complexity.Query.SyncLogs(childComplexity), true
+
+	case "SyncLog.id":
+		if e.complexity.SyncLog.ID == nil {
+			break
+		}
+
+		return e.complexity.SyncLog.ID(childComplexity), true
+
+	case "SyncLog.snapshotId":
+		if e.complexity.SyncLog.SnapshotID == nil {
+			break
+		}
+
+		return e.complexity.SyncLog.SnapshotID(childComplexity), true
+
+	case "SyncLog.userId":
+		if e.complexity.SyncLog.UserID == nil {
+			break
+		}
+
+		return e.complexity.SyncLog.UserID(childComplexity), true
 
 	}
 	return 0, false
@@ -156,7 +210,10 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	rc := graphql.GetOperationContext(ctx)
 	ec := executionContext{rc, e}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
-		ec.unmarshalInputNewTodo,
+		ec.unmarshalInputNewPlaylistAssociationSnapshot,
+		ec.unmarshalInputNewPlaylistSnapshot,
+		ec.unmarshalInputNewPlaylistSnapshotConfiguration,
+		ec.unmarshalInputNewSyncLog,
 	)
 	first := true
 
@@ -217,33 +274,60 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema.graphqls", Input: `# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
-
-type Todo {
+	{Name: "../schema.graphqls", Input: `type SyncLog {
   id: ID!
-  text: String!
-  done: Boolean!
-  user: User!
+  userId: ID!
+  snapshotId: ID!
 }
 
-type User {
+type PlaylistSnapshotConfiguration {
   id: ID!
+  playlists: [PlaylistSnapshot!]!
+}
+
+type PlaylistSnapshot {
   name: String!
+  spotifyPlaylistId: String
+  playlistOrder: String
+  associations: [PlaylistAssociationSnapshot!]!
+}
+
+type PlaylistAssociationSnapshot {
+  name: String!
+  childPlaylistId: ID!
+  parentPlaylistId: ID!
 }
 
 type Query {
-  todos: [Todo!]!
+  syncLogs: [SyncLog!]!
 }
 
-input NewTodo {
-  text: String!
-  userId: String!
+input NewSyncLog {
+  snapshotId: ID!
+}
+
+input NewPlaylistSnapshotConfiguration {
+  playlists: [NewPlaylistSnapshot!]!
+}
+
+input NewPlaylistSnapshot {
+  name: String!
+  playlistId: ID!
+  spotifyPlaylistId: String
+  playlistOrder: String
+  associations: [NewPlaylistAssociationSnapshot!]!
+}
+
+input NewPlaylistAssociationSnapshot {
+  childPlaylistId: ID!
+  parentPlaylistId: ID!
 }
 
 type Mutation {
-  createTodo(input: NewTodo!): Todo!
+  # createSyncLog(input: NewSyncLog!): SyncLog!
+  createPlaylistSnapshotConfiguration(
+    input: NewPlaylistSnapshotConfiguration!
+  ): PlaylistSnapshotConfiguration!
 }
 `, BuiltIn: false},
 }
@@ -253,13 +337,13 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // region    ***************************** args.gotpl *****************************
 
-func (ec *executionContext) field_Mutation_createTodo_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+func (ec *executionContext) field_Mutation_createPlaylistSnapshotConfiguration_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 model.NewTodo
+	var arg0 model.NewPlaylistSnapshotConfiguration
 	if tmp, ok := rawArgs["input"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
-		arg0, err = ec.unmarshalNNewTodo2githubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewTodo(ctx, tmp)
+		arg0, err = ec.unmarshalNNewPlaylistSnapshotConfiguration2githubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewPlaylistSnapshotConfiguration(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -321,8 +405,8 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
-func (ec *executionContext) _Mutation_createTodo(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Mutation_createTodo(ctx, field)
+func (ec *executionContext) _Mutation_createPlaylistSnapshotConfiguration(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_createPlaylistSnapshotConfiguration(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -335,7 +419,7 @@ func (ec *executionContext) _Mutation_createTodo(ctx context.Context, field grap
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Mutation().CreateTodo(rctx, fc.Args["input"].(model.NewTodo))
+		return ec.resolvers.Mutation().CreatePlaylistSnapshotConfiguration(rctx, fc.Args["input"].(model.NewPlaylistSnapshotConfiguration))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -347,12 +431,12 @@ func (ec *executionContext) _Mutation_createTodo(ctx context.Context, field grap
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.Todo)
+	res := resTmp.(*model.PlaylistSnapshotConfiguration)
 	fc.Result = res
-	return ec.marshalNTodo2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐTodo(ctx, field.Selections, res)
+	return ec.marshalNPlaylistSnapshotConfiguration2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Mutation_createTodo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Mutation_createPlaylistSnapshotConfiguration(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Mutation",
 		Field:      field,
@@ -361,15 +445,11 @@ func (ec *executionContext) fieldContext_Mutation_createTodo(ctx context.Context
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Todo_id(ctx, field)
-			case "text":
-				return ec.fieldContext_Todo_text(ctx, field)
-			case "done":
-				return ec.fieldContext_Todo_done(ctx, field)
-			case "user":
-				return ec.fieldContext_Todo_user(ctx, field)
+				return ec.fieldContext_PlaylistSnapshotConfiguration_id(ctx, field)
+			case "playlists":
+				return ec.fieldContext_PlaylistSnapshotConfiguration_playlists(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Todo", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type PlaylistSnapshotConfiguration", field.Name)
 		},
 	}
 	defer func() {
@@ -379,15 +459,15 @@ func (ec *executionContext) fieldContext_Mutation_createTodo(ctx context.Context
 		}
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Mutation_createTodo_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+	if fc.Args, err = ec.field_Mutation_createPlaylistSnapshotConfiguration_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_todos(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_todos(ctx, field)
+func (ec *executionContext) _PlaylistAssociationSnapshot_name(ctx context.Context, field graphql.CollectedField, obj *model.PlaylistAssociationSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlaylistAssociationSnapshot_name(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -400,7 +480,7 @@ func (ec *executionContext) _Query_todos(ctx context.Context, field graphql.Coll
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Todos(rctx)
+		return obj.Name, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -412,12 +492,420 @@ func (ec *executionContext) _Query_todos(ctx context.Context, field graphql.Coll
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.Todo)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNTodo2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐTodoᚄ(ctx, field.Selections, res)
+	return ec.marshalNString2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_todos(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_PlaylistAssociationSnapshot_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlaylistAssociationSnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlaylistAssociationSnapshot_childPlaylistId(ctx context.Context, field graphql.CollectedField, obj *model.PlaylistAssociationSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlaylistAssociationSnapshot_childPlaylistId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ChildPlaylistID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlaylistAssociationSnapshot_childPlaylistId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlaylistAssociationSnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlaylistAssociationSnapshot_parentPlaylistId(ctx context.Context, field graphql.CollectedField, obj *model.PlaylistAssociationSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlaylistAssociationSnapshot_parentPlaylistId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ParentPlaylistID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlaylistAssociationSnapshot_parentPlaylistId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlaylistAssociationSnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlaylistSnapshot_name(ctx context.Context, field graphql.CollectedField, obj *model.PlaylistSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlaylistSnapshot_name(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Name, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlaylistSnapshot_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlaylistSnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlaylistSnapshot_spotifyPlaylistId(ctx context.Context, field graphql.CollectedField, obj *model.PlaylistSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlaylistSnapshot_spotifyPlaylistId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SpotifyPlaylistID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlaylistSnapshot_spotifyPlaylistId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlaylistSnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlaylistSnapshot_playlistOrder(ctx context.Context, field graphql.CollectedField, obj *model.PlaylistSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlaylistSnapshot_playlistOrder(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PlaylistOrder, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlaylistSnapshot_playlistOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlaylistSnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlaylistSnapshot_associations(ctx context.Context, field graphql.CollectedField, obj *model.PlaylistSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlaylistSnapshot_associations(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Associations, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.PlaylistAssociationSnapshot)
+	fc.Result = res
+	return ec.marshalNPlaylistAssociationSnapshot2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistAssociationSnapshotᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlaylistSnapshot_associations(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlaylistSnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_PlaylistAssociationSnapshot_name(ctx, field)
+			case "childPlaylistId":
+				return ec.fieldContext_PlaylistAssociationSnapshot_childPlaylistId(ctx, field)
+			case "parentPlaylistId":
+				return ec.fieldContext_PlaylistAssociationSnapshot_parentPlaylistId(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PlaylistAssociationSnapshot", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlaylistSnapshotConfiguration_id(ctx context.Context, field graphql.CollectedField, obj *model.PlaylistSnapshotConfiguration) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlaylistSnapshotConfiguration_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlaylistSnapshotConfiguration_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlaylistSnapshotConfiguration",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlaylistSnapshotConfiguration_playlists(ctx context.Context, field graphql.CollectedField, obj *model.PlaylistSnapshotConfiguration) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlaylistSnapshotConfiguration_playlists(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Playlists, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.PlaylistSnapshot)
+	fc.Result = res
+	return ec.marshalNPlaylistSnapshot2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlaylistSnapshotConfiguration_playlists(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlaylistSnapshotConfiguration",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "name":
+				return ec.fieldContext_PlaylistSnapshot_name(ctx, field)
+			case "spotifyPlaylistId":
+				return ec.fieldContext_PlaylistSnapshot_spotifyPlaylistId(ctx, field)
+			case "playlistOrder":
+				return ec.fieldContext_PlaylistSnapshot_playlistOrder(ctx, field)
+			case "associations":
+				return ec.fieldContext_PlaylistSnapshot_associations(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PlaylistSnapshot", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_syncLogs(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_syncLogs(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().SyncLogs(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.SyncLog)
+	fc.Result = res
+	return ec.marshalNSyncLog2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncLogᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_syncLogs(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -426,15 +914,13 @@ func (ec *executionContext) fieldContext_Query_todos(ctx context.Context, field 
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_Todo_id(ctx, field)
-			case "text":
-				return ec.fieldContext_Todo_text(ctx, field)
-			case "done":
-				return ec.fieldContext_Todo_done(ctx, field)
-			case "user":
-				return ec.fieldContext_Todo_user(ctx, field)
+				return ec.fieldContext_SyncLog_id(ctx, field)
+			case "userId":
+				return ec.fieldContext_SyncLog_userId(ctx, field)
+			case "snapshotId":
+				return ec.fieldContext_SyncLog_snapshotId(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type Todo", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SyncLog", field.Name)
 		},
 	}
 	return fc, nil
@@ -569,8 +1055,8 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _Todo_id(ctx context.Context, field graphql.CollectedField, obj *model.Todo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Todo_id(ctx, field)
+func (ec *executionContext) _SyncLog_id(ctx context.Context, field graphql.CollectedField, obj *model.SyncLog) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SyncLog_id(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -600,9 +1086,9 @@ func (ec *executionContext) _Todo_id(ctx context.Context, field graphql.Collecte
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Todo_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SyncLog_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "Todo",
+		Object:     "SyncLog",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -613,8 +1099,8 @@ func (ec *executionContext) fieldContext_Todo_id(ctx context.Context, field grap
 	return fc, nil
 }
 
-func (ec *executionContext) _Todo_text(ctx context.Context, field graphql.CollectedField, obj *model.Todo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Todo_text(ctx, field)
+func (ec *executionContext) _SyncLog_userId(ctx context.Context, field graphql.CollectedField, obj *model.SyncLog) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SyncLog_userId(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -627,145 +1113,7 @@ func (ec *executionContext) _Todo_text(ctx context.Context, field graphql.Collec
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Text, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Todo_text(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Todo",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Todo_done(ctx context.Context, field graphql.CollectedField, obj *model.Todo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Todo_done(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Done, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(bool)
-	fc.Result = res
-	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Todo_done(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Todo",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Todo_user(ctx context.Context, field graphql.CollectedField, obj *model.Todo) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Todo_user(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.User, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.User)
-	fc.Result = res
-	return ec.marshalNUser2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐUser(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Todo_user(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Todo",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_User_id(ctx, field)
-			case "name":
-				return ec.fieldContext_User_name(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_User_id(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ID, nil
+		return obj.UserID, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -782,9 +1130,9 @@ func (ec *executionContext) _User_id(ctx context.Context, field graphql.Collecte
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_User_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SyncLog_userId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "User",
+		Object:     "SyncLog",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -795,8 +1143,8 @@ func (ec *executionContext) fieldContext_User_id(ctx context.Context, field grap
 	return fc, nil
 }
 
-func (ec *executionContext) _User_name(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_User_name(ctx, field)
+func (ec *executionContext) _SyncLog_snapshotId(ctx context.Context, field graphql.CollectedField, obj *model.SyncLog) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SyncLog_snapshotId(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -809,7 +1157,7 @@ func (ec *executionContext) _User_name(ctx context.Context, field graphql.Collec
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Name, nil
+		return obj.SnapshotID, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -823,17 +1171,17 @@ func (ec *executionContext) _User_name(ctx context.Context, field graphql.Collec
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_User_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SyncLog_snapshotId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "User",
+		Object:     "SyncLog",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type ID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2612,33 +2960,149 @@ func (ec *executionContext) fieldContext___Type_specifiedByURL(ctx context.Conte
 
 // region    **************************** input.gotpl *****************************
 
-func (ec *executionContext) unmarshalInputNewTodo(ctx context.Context, obj interface{}) (model.NewTodo, error) {
-	var it model.NewTodo
+func (ec *executionContext) unmarshalInputNewPlaylistAssociationSnapshot(ctx context.Context, obj interface{}) (model.NewPlaylistAssociationSnapshot, error) {
+	var it model.NewPlaylistAssociationSnapshot
 	asMap := map[string]interface{}{}
 	for k, v := range obj.(map[string]interface{}) {
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"text", "userId"}
+	fieldsInOrder := [...]string{"childPlaylistId", "parentPlaylistId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "text":
+		case "childPlaylistId":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("text"))
-			it.Text, err = ec.unmarshalNString2string(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("childPlaylistId"))
+			it.ChildPlaylistID, err = ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
-		case "userId":
+		case "parentPlaylistId":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("userId"))
-			it.UserID, err = ec.unmarshalNString2string(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("parentPlaylistId"))
+			it.ParentPlaylistID, err = ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputNewPlaylistSnapshot(ctx context.Context, obj interface{}) (model.NewPlaylistSnapshot, error) {
+	var it model.NewPlaylistSnapshot
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "playlistId", "spotifyPlaylistId", "playlistOrder", "associations"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			it.Name, err = ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "playlistId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("playlistId"))
+			it.PlaylistID, err = ec.unmarshalNID2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "spotifyPlaylistId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("spotifyPlaylistId"))
+			it.SpotifyPlaylistID, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "playlistOrder":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("playlistOrder"))
+			it.PlaylistOrder, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		case "associations":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("associations"))
+			it.Associations, err = ec.unmarshalNNewPlaylistAssociationSnapshot2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewPlaylistAssociationSnapshotᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputNewPlaylistSnapshotConfiguration(ctx context.Context, obj interface{}) (model.NewPlaylistSnapshotConfiguration, error) {
+	var it model.NewPlaylistSnapshotConfiguration
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"playlists"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "playlists":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("playlists"))
+			it.Playlists, err = ec.unmarshalNNewPlaylistSnapshot2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewPlaylistSnapshotᚄ(ctx, v)
+			if err != nil {
+				return it, err
+			}
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputNewSyncLog(ctx context.Context, obj interface{}) (model.NewSyncLog, error) {
+	var it model.NewSyncLog
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"snapshotId"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "snapshotId":
+			var err error
+
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("snapshotId"))
+			it.SnapshotID, err = ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -2675,11 +3139,131 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
-		case "createTodo":
+		case "createPlaylistSnapshotConfiguration":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
-				return ec._Mutation_createTodo(ctx, field)
+				return ec._Mutation_createPlaylistSnapshotConfiguration(ctx, field)
 			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var playlistAssociationSnapshotImplementors = []string{"PlaylistAssociationSnapshot"}
+
+func (ec *executionContext) _PlaylistAssociationSnapshot(ctx context.Context, sel ast.SelectionSet, obj *model.PlaylistAssociationSnapshot) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, playlistAssociationSnapshotImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PlaylistAssociationSnapshot")
+		case "name":
+
+			out.Values[i] = ec._PlaylistAssociationSnapshot_name(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "childPlaylistId":
+
+			out.Values[i] = ec._PlaylistAssociationSnapshot_childPlaylistId(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "parentPlaylistId":
+
+			out.Values[i] = ec._PlaylistAssociationSnapshot_parentPlaylistId(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var playlistSnapshotImplementors = []string{"PlaylistSnapshot"}
+
+func (ec *executionContext) _PlaylistSnapshot(ctx context.Context, sel ast.SelectionSet, obj *model.PlaylistSnapshot) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, playlistSnapshotImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PlaylistSnapshot")
+		case "name":
+
+			out.Values[i] = ec._PlaylistSnapshot_name(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "spotifyPlaylistId":
+
+			out.Values[i] = ec._PlaylistSnapshot_spotifyPlaylistId(ctx, field, obj)
+
+		case "playlistOrder":
+
+			out.Values[i] = ec._PlaylistSnapshot_playlistOrder(ctx, field, obj)
+
+		case "associations":
+
+			out.Values[i] = ec._PlaylistSnapshot_associations(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var playlistSnapshotConfigurationImplementors = []string{"PlaylistSnapshotConfiguration"}
+
+func (ec *executionContext) _PlaylistSnapshotConfiguration(ctx context.Context, sel ast.SelectionSet, obj *model.PlaylistSnapshotConfiguration) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, playlistSnapshotConfigurationImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("PlaylistSnapshotConfiguration")
+		case "id":
+
+			out.Values[i] = ec._PlaylistSnapshotConfiguration_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "playlists":
+
+			out.Values[i] = ec._PlaylistSnapshotConfiguration_playlists(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -2714,7 +3298,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
-		case "todos":
+		case "syncLogs":
 			field := field
 
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -2723,7 +3307,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_todos(ctx, field)
+				res = ec._Query_syncLogs(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -2760,75 +3344,33 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 	return out
 }
 
-var todoImplementors = []string{"Todo"}
+var syncLogImplementors = []string{"SyncLog"}
 
-func (ec *executionContext) _Todo(ctx context.Context, sel ast.SelectionSet, obj *model.Todo) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, todoImplementors)
+func (ec *executionContext) _SyncLog(ctx context.Context, sel ast.SelectionSet, obj *model.SyncLog) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, syncLogImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("Todo")
+			out.Values[i] = graphql.MarshalString("SyncLog")
 		case "id":
 
-			out.Values[i] = ec._Todo_id(ctx, field, obj)
+			out.Values[i] = ec._SyncLog_id(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "text":
+		case "userId":
 
-			out.Values[i] = ec._Todo_text(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "done":
-
-			out.Values[i] = ec._Todo_done(ctx, field, obj)
+			out.Values[i] = ec._SyncLog_userId(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "user":
+		case "snapshotId":
 
-			out.Values[i] = ec._Todo_user(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch()
-	if invalids > 0 {
-		return graphql.Null
-	}
-	return out
-}
-
-var userImplementors = []string{"User"}
-
-func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *model.User) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, userImplementors)
-	out := graphql.NewFieldSet(fields)
-	var invalids uint32
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("User")
-		case "id":
-
-			out.Values[i] = ec._User_id(ctx, field, obj)
-
-			if out.Values[i] == graphql.Null {
-				invalids++
-			}
-		case "name":
-
-			out.Values[i] = ec._User_name(ctx, field, obj)
+			out.Values[i] = ec._SyncLog_snapshotId(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -3192,31 +3734,56 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 	return res
 }
 
-func (ec *executionContext) unmarshalNNewTodo2githubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewTodo(ctx context.Context, v interface{}) (model.NewTodo, error) {
-	res, err := ec.unmarshalInputNewTodo(ctx, v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
-	res, err := graphql.UnmarshalString(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalString(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+func (ec *executionContext) unmarshalNNewPlaylistAssociationSnapshot2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewPlaylistAssociationSnapshotᚄ(ctx context.Context, v interface{}) ([]*model.NewPlaylistAssociationSnapshot, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]*model.NewPlaylistAssociationSnapshot, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNNewPlaylistAssociationSnapshot2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewPlaylistAssociationSnapshot(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
 		}
 	}
-	return res
+	return res, nil
 }
 
-func (ec *executionContext) marshalNTodo2githubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐTodo(ctx context.Context, sel ast.SelectionSet, v model.Todo) graphql.Marshaler {
-	return ec._Todo(ctx, sel, &v)
+func (ec *executionContext) unmarshalNNewPlaylistAssociationSnapshot2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewPlaylistAssociationSnapshot(ctx context.Context, v interface{}) (*model.NewPlaylistAssociationSnapshot, error) {
+	res, err := ec.unmarshalInputNewPlaylistAssociationSnapshot(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalNTodo2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐTodoᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Todo) graphql.Marshaler {
+func (ec *executionContext) unmarshalNNewPlaylistSnapshot2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewPlaylistSnapshotᚄ(ctx context.Context, v interface{}) ([]*model.NewPlaylistSnapshot, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]*model.NewPlaylistSnapshot, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalNNewPlaylistSnapshot2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewPlaylistSnapshot(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalNNewPlaylistSnapshot2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewPlaylistSnapshot(ctx context.Context, v interface{}) (*model.NewPlaylistSnapshot, error) {
+	res, err := ec.unmarshalInputNewPlaylistSnapshot(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNNewPlaylistSnapshotConfiguration2githubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewPlaylistSnapshotConfiguration(ctx context.Context, v interface{}) (model.NewPlaylistSnapshotConfiguration, error) {
+	res, err := ec.unmarshalInputNewPlaylistSnapshotConfiguration(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPlaylistAssociationSnapshot2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistAssociationSnapshotᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PlaylistAssociationSnapshot) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -3240,7 +3807,7 @@ func (ec *executionContext) marshalNTodo2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋ
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalNTodo2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐTodo(ctx, sel, v[i])
+			ret[i] = ec.marshalNPlaylistAssociationSnapshot2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistAssociationSnapshot(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -3260,24 +3827,151 @@ func (ec *executionContext) marshalNTodo2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋ
 	return ret
 }
 
-func (ec *executionContext) marshalNTodo2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐTodo(ctx context.Context, sel ast.SelectionSet, v *model.Todo) graphql.Marshaler {
+func (ec *executionContext) marshalNPlaylistAssociationSnapshot2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistAssociationSnapshot(ctx context.Context, sel ast.SelectionSet, v *model.PlaylistAssociationSnapshot) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
 		}
 		return graphql.Null
 	}
-	return ec._Todo(ctx, sel, v)
+	return ec._PlaylistAssociationSnapshot(ctx, sel, v)
 }
 
-func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v *model.User) graphql.Marshaler {
+func (ec *executionContext) marshalNPlaylistSnapshot2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PlaylistSnapshot) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPlaylistSnapshot2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshot(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNPlaylistSnapshot2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshot(ctx context.Context, sel ast.SelectionSet, v *model.PlaylistSnapshot) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
 		}
 		return graphql.Null
 	}
-	return ec._User(ctx, sel, v)
+	return ec._PlaylistSnapshot(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNPlaylistSnapshotConfiguration2githubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx context.Context, sel ast.SelectionSet, v model.PlaylistSnapshotConfiguration) graphql.Marshaler {
+	return ec._PlaylistSnapshotConfiguration(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNPlaylistSnapshotConfiguration2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx context.Context, sel ast.SelectionSet, v *model.PlaylistSnapshotConfiguration) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._PlaylistSnapshotConfiguration(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalString(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalString(v)
+	if res == graphql.Null {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+	}
+	return res
+}
+
+func (ec *executionContext) marshalNSyncLog2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncLogᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SyncLog) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNSyncLog2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncLog(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNSyncLog2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncLog(ctx context.Context, sel ast.SelectionSet, v *model.SyncLog) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SyncLog(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {

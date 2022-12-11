@@ -1,28 +1,55 @@
-# GraphQL schema example
-#
-# https://gqlgen.com/getting-started/
-
-type Todo {
+type SyncLog {
   id: ID!
-  text: String!
-  done: Boolean!
-  user: User!
+  userId: ID!
+  snapshotId: ID!
 }
 
-type User {
+type PlaylistSnapshotConfiguration {
   id: ID!
+  playlists: [PlaylistSnapshot!]!
+}
+
+type PlaylistSnapshot {
   name: String!
+  spotifyPlaylistId: String
+  playlistOrder: String
+  associations: [PlaylistAssociationSnapshot!]!
+}
+
+type PlaylistAssociationSnapshot {
+  name: String!
+  childPlaylistId: ID!
+  parentPlaylistId: ID!
 }
 
 type Query {
-  todos: [Todo!]!
+  syncLogs: [SyncLog!]!
 }
 
-input NewTodo {
-  text: String!
-  userId: String!
+input NewSyncLog {
+  snapshotId: ID!
+}
+
+input NewPlaylistSnapshotConfiguration {
+  playlists: [NewPlaylistSnapshot!]!
+}
+
+input NewPlaylistSnapshot {
+  name: String!
+  playlistId: ID!
+  spotifyPlaylistId: String
+  playlistOrder: String
+  associations: [NewPlaylistAssociationSnapshot!]!
+}
+
+input NewPlaylistAssociationSnapshot {
+  childPlaylistId: ID!
+  parentPlaylistId: ID!
 }
 
 type Mutation {
-  createTodo(input: NewTodo!): Todo!
+  # createSyncLog(input: NewSyncLog!): SyncLog!
+  createPlaylistSnapshotConfiguration(
+    input: NewPlaylistSnapshotConfiguration!
+  ): PlaylistSnapshotConfiguration!
 }

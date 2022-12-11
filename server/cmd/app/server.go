@@ -4,6 +4,7 @@ import (
 	"os"
 
 	"github.com/SolomonRosemite/Mixify/api/server"
+	"github.com/SolomonRosemite/Mixify/db"
 	"github.com/SolomonRosemite/Mixify/internal/models"
 	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
@@ -18,17 +19,17 @@ func main() {
 		panic(err)
 	}
 
-	var db *gorm.DB
+	var gormDB *gorm.DB
 
-	if db, err = gorm.Open(postgres.Open(os.Getenv("DATABASE_DSN")), &gorm.Config{
+	if gormDB, err = gorm.Open(postgres.Open(os.Getenv("DATABASE_DSN")), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Info),
 	}); err != nil {
 		panic(err)
 	}
 
-	if err = db.AutoMigrate(&models.PlaylistAssociationSnapshot{}, &models.PlaylistSnapshot{}); err != nil {
+	if err = gormDB.AutoMigrate(&models.User{}, &models.SyncPlaylistsEvent{}, &models.PlaylistConfigurationSnapshot{}, &models.PlaylistAssociationSnapshot{}, &models.PlaylistSnapshot{}); err != nil {
 		panic(err)
 	}
 
-	server.StartServer()
+	server.StartServer(&db.DBWrapper{DB: gormDB})
 }
