@@ -68,16 +68,6 @@ func (r *mutationResolver) CreatePlaylistSnapshotConfiguration(ctx context.Conte
 	return &model.PlaylistSnapshotConfiguration{}, nil
 }
 
-func combinationAlreadyExist(childPlaylistID *uint, parentPlaylistID *uint, association *[]*models.PlaylistAssociationSnapshot) bool {
-	for _, a := range *association {
-		if *a.ChildPlaylistID == *childPlaylistID && *a.ParentPlaylistID == *parentPlaylistID {
-			return true
-		}
-	}
-
-	return false
-}
-
 // SyncLogs is the resolver for the syncLogs field.
 func (r *queryResolver) SyncLogs(ctx context.Context) ([]*model.SyncLog, error) {
 	testUserId := uint(1)
@@ -99,3 +89,19 @@ func (r *Resolver) Query() generated.QueryResolver { return &queryResolver{r} }
 
 type mutationResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+func combinationAlreadyExist(childPlaylistID *uint, parentPlaylistID *uint, association *[]*models.PlaylistAssociationSnapshot) bool {
+	for _, a := range *association {
+		if *a.ChildPlaylistID == *childPlaylistID && *a.ParentPlaylistID == *parentPlaylistID {
+			return true
+		}
+	}
+
+	return false
+}

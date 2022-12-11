@@ -274,7 +274,7 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema.graphqls", Input: `type SyncLog {
+	{Name: "../schema.graphql", Input: `type SyncLog {
   id: ID!
   userId: ID!
   snapshotId: ID!
