@@ -10,7 +10,7 @@ import (
 	"github.com/zmb3/spotify/v2"
 )
 
-func CreateOrUpdatePlaylists(client *spotify.Client, nodes *[]*playlistNode, playlists *[]*models.PlaylistSnapshot) (any, error) {
+func CreateOrUpdatePlaylists(client *spotify.Client, nodes *[]*PlaylistNode, playlists *[]*models.PlaylistSnapshot) (any, error) {
 	user, err := client.CurrentUser(context.Background())
 	if err != nil {
 		return nil, err

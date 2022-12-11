@@ -7,7 +7,7 @@ import (
 	"github.com/dominikbraun/graph/draw"
 )
 
-func CreatePrettyGraph(startingNode playlistNode) {
+func CreatePrettyGraph(startingNode PlaylistNode) {
 
 	g := graph.New(graph.StringHash, graph.Directed())
 
@@ -18,7 +18,7 @@ func CreatePrettyGraph(startingNode playlistNode) {
 	_ = draw.DOT(g, file)
 }
 
-func createVertices(n *playlistNode, g graph.Graph[string, string]) {
+func createVertices(n *PlaylistNode, g graph.Graph[string, string]) {
 	err := g.AddVertex(n.Name)
 
 	if err != nil {
@@ -34,7 +34,7 @@ func createVertices(n *playlistNode, g graph.Graph[string, string]) {
 	}
 }
 
-func createEdges(n *playlistNode, g graph.Graph[string, string]) {
+func createEdges(n *PlaylistNode, g graph.Graph[string, string]) {
 	if n.ChildrenNodes == nil {
 		return
 	}
