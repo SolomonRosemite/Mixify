@@ -50,12 +50,13 @@ type ComplexityRoot struct {
 
 	PlaylistAssociationSnapshot struct {
 		ChildPlaylistID  func(childComplexity int) int
-		Name             func(childComplexity int) int
+		ID               func(childComplexity int) int
 		ParentPlaylistID func(childComplexity int) int
 	}
 
 	PlaylistSnapshot struct {
 		Associations      func(childComplexity int) int
+		ID                func(childComplexity int) int
 		Name              func(childComplexity int) int
 		PlaylistOrder     func(childComplexity int) int
 		SpotifyPlaylistID func(childComplexity int) int
@@ -118,12 +119,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PlaylistAssociationSnapshot.ChildPlaylistID(childComplexity), true
 
-	case "PlaylistAssociationSnapshot.name":
-		if e.complexity.PlaylistAssociationSnapshot.Name == nil {
+	case "PlaylistAssociationSnapshot.id":
+		if e.complexity.PlaylistAssociationSnapshot.ID == nil {
 			break
 		}
 
-		return e.complexity.PlaylistAssociationSnapshot.Name(childComplexity), true
+		return e.complexity.PlaylistAssociationSnapshot.ID(childComplexity), true
 
 	case "PlaylistAssociationSnapshot.parentPlaylistId":
 		if e.complexity.PlaylistAssociationSnapshot.ParentPlaylistID == nil {
@@ -138,6 +139,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.PlaylistSnapshot.Associations(childComplexity), true
+
+	case "PlaylistSnapshot.id":
+		if e.complexity.PlaylistSnapshot.ID == nil {
+			break
+		}
+
+		return e.complexity.PlaylistSnapshot.ID(childComplexity), true
 
 	case "PlaylistSnapshot.name":
 		if e.complexity.PlaylistSnapshot.Name == nil {
@@ -286,6 +294,7 @@ type PlaylistSnapshotConfiguration {
 }
 
 type PlaylistSnapshot {
+  id: ID!
   name: String!
   spotifyPlaylistId: String
   playlistOrder: [Int]!
@@ -293,7 +302,7 @@ type PlaylistSnapshot {
 }
 
 type PlaylistAssociationSnapshot {
-  name: String!
+  id: ID!
   childPlaylistId: ID!
   parentPlaylistId: ID!
 }
@@ -466,8 +475,8 @@ func (ec *executionContext) fieldContext_Mutation_createPlaylistSnapshotConfigur
 	return fc, nil
 }
 
-func (ec *executionContext) _PlaylistAssociationSnapshot_name(ctx context.Context, field graphql.CollectedField, obj *model.PlaylistAssociationSnapshot) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_PlaylistAssociationSnapshot_name(ctx, field)
+func (ec *executionContext) _PlaylistAssociationSnapshot_id(ctx context.Context, field graphql.CollectedField, obj *model.PlaylistAssociationSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlaylistAssociationSnapshot_id(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -480,7 +489,7 @@ func (ec *executionContext) _PlaylistAssociationSnapshot_name(ctx context.Contex
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Name, nil
+		return obj.ID, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -494,17 +503,17 @@ func (ec *executionContext) _PlaylistAssociationSnapshot_name(ctx context.Contex
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
+	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_PlaylistAssociationSnapshot_name(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_PlaylistAssociationSnapshot_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "PlaylistAssociationSnapshot",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type ID does not have child fields")
 		},
 	}
 	return fc, nil
@@ -588,6 +597,50 @@ func (ec *executionContext) _PlaylistAssociationSnapshot_parentPlaylistId(ctx co
 func (ec *executionContext) fieldContext_PlaylistAssociationSnapshot_parentPlaylistId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "PlaylistAssociationSnapshot",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PlaylistSnapshot_id(ctx context.Context, field graphql.CollectedField, obj *model.PlaylistSnapshot) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PlaylistSnapshot_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PlaylistSnapshot_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PlaylistSnapshot",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -766,8 +819,8 @@ func (ec *executionContext) fieldContext_PlaylistSnapshot_associations(ctx conte
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "name":
-				return ec.fieldContext_PlaylistAssociationSnapshot_name(ctx, field)
+			case "id":
+				return ec.fieldContext_PlaylistAssociationSnapshot_id(ctx, field)
 			case "childPlaylistId":
 				return ec.fieldContext_PlaylistAssociationSnapshot_childPlaylistId(ctx, field)
 			case "parentPlaylistId":
@@ -862,6 +915,8 @@ func (ec *executionContext) fieldContext_PlaylistSnapshotConfiguration_playlists
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_PlaylistSnapshot_id(ctx, field)
 			case "name":
 				return ec.fieldContext_PlaylistSnapshot_name(ctx, field)
 			case "spotifyPlaylistId":
@@ -3172,9 +3227,9 @@ func (ec *executionContext) _PlaylistAssociationSnapshot(ctx context.Context, se
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("PlaylistAssociationSnapshot")
-		case "name":
+		case "id":
 
-			out.Values[i] = ec._PlaylistAssociationSnapshot_name(ctx, field, obj)
+			out.Values[i] = ec._PlaylistAssociationSnapshot_id(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -3214,6 +3269,13 @@ func (ec *executionContext) _PlaylistSnapshot(ctx context.Context, sel ast.Selec
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("PlaylistSnapshot")
+		case "id":
+
+			out.Values[i] = ec._PlaylistSnapshot_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "name":
 
 			out.Values[i] = ec._PlaylistSnapshot_name(ctx, field, obj)

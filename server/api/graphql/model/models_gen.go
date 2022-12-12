@@ -24,12 +24,13 @@ type NewSyncLog struct {
 }
 
 type PlaylistAssociationSnapshot struct {
-	Name             string `json:"name"`
+	ID               string `json:"id"`
 	ChildPlaylistID  string `json:"childPlaylistId"`
 	ParentPlaylistID string `json:"parentPlaylistId"`
 }
 
 type PlaylistSnapshot struct {
+	ID                string                         `json:"id"`
 	Name              string                         `json:"name"`
 	SpotifyPlaylistID *string                        `json:"spotifyPlaylistId"`
 	PlaylistOrder     []*int                         `json:"playlistOrder"`

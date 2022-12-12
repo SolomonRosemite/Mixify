@@ -10,6 +10,7 @@ type PlaylistSnapshotConfiguration {
 }
 
 type PlaylistSnapshot {
+  id: ID!
   name: String!
   spotifyPlaylistId: String
   playlistOrder: [Int]!
@@ -17,7 +18,7 @@ type PlaylistSnapshot {
 }
 
 type PlaylistAssociationSnapshot {
-  name: String!
+  id: ID!
   childPlaylistId: ID!
   parentPlaylistId: ID!
 }

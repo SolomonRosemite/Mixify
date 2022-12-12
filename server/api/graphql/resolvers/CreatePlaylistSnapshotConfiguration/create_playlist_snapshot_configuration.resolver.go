@@ -73,9 +73,66 @@ func CreatePlaylistSnapshotConfiguration(ctx *context.Context, input *model.NewP
 		return nil, err
 	}
 
-	// TODO: Update schema and return
+	r := createResponse(playlistSnapshotConfiguration.ID, &playlists)
+	return &r, nil
+}
 
-	return &model.PlaylistSnapshotConfiguration{}, nil
+func createResponse(snapshotID uint, dbPlaylists *[]*models.PlaylistSnapshot) model.PlaylistSnapshotConfiguration {
+	r := model.PlaylistSnapshotConfiguration{
+		ID:        fmt.Sprint(snapshotID),
+		Playlists: createPlaylists(dbPlaylists),
+	}
+
+	return r
+
+}
+
+func createPlaylists(dbPlaylists *[]*models.PlaylistSnapshot) []*model.PlaylistSnapshot {
+	playlists := []*model.PlaylistSnapshot{}
+
+	for _, dbP := range *dbPlaylists {
+		newP := model.PlaylistSnapshot{
+			ID:                fmt.Sprint(dbP.ID),
+			Name:              *dbP.Name,
+			SpotifyPlaylistID: dbP.SpotifyPlaylistID,
+			PlaylistOrder:     createPlaylistOrder(dbP.PlaylistsOrder),
+			Associations:      createAssociations(dbP.Associations),
+		}
+
+		playlists = append(playlists, &newP)
+	}
+
+	return playlists
+}
+
+func createPlaylistOrder(playlistOrder *string) []*int {
+	if *playlistOrder == "[]" {
+		return []*int{}
+	}
+
+	playlistOrderIds := []*int{}
+
+	b := []byte(*playlistOrder)
+	err := json.Unmarshal(b, &playlistOrderIds)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return playlistOrderIds
+}
+
+func createAssociations(dbAssociations *[]*models.PlaylistAssociationSnapshot) []*model.PlaylistAssociationSnapshot {
+	associations := []*model.PlaylistAssociationSnapshot{}
+	for _, a := range *dbAssociations {
+		associations = append(associations, &model.PlaylistAssociationSnapshot{
+			ID:               fmt.Sprint(a.ID),
+			ChildPlaylistID:  fmt.Sprint(*a.ChildPlaylistID),
+			ParentPlaylistID: fmt.Sprint(*a.ParentPlaylistID),
+		})
+	}
+
+	return associations
 }
 
 func getUpdatedPlaylistOrderIds(group *playlistGroup, groups *[]*playlistGroup) *string {
