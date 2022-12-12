@@ -20,7 +20,6 @@ type playlistGroup struct {
 
 func CreatePlaylistSnapshotConfiguration(ctx *context.Context, input *model.NewPlaylistSnapshotConfiguration, db *gorm.DB) (*model.PlaylistSnapshotConfiguration, error) {
 	playlists := []*models.PlaylistSnapshot{}
-	association := []*models.PlaylistAssociationSnapshot{}
 	playlistGroups := []*playlistGroup{}
 
 	for _, p := range input.Playlists {
@@ -49,7 +48,7 @@ func CreatePlaylistSnapshotConfiguration(ctx *context.Context, input *model.NewP
 	}
 
 	// We create the graph to verify no circular dependencies exist
-	mixify.CreateMixStackGraph(&playlists, &association)
+	mixify.CreateMixStackGraph(&playlists)
 
 	// Since the playlist ids where only set to create the graph, once the graph is created we have to reset the ids
 	// to zero. If not gorm will update the playlists instead.

@@ -12,18 +12,26 @@ type PlaylistNode struct {
 	ChildrenNodes *[]*PlaylistNode
 }
 
-func CreateMixStackGraph(playlists *[]*models.PlaylistSnapshot, associations *[]*models.PlaylistAssociationSnapshot) *[]*PlaylistNode {
-	return buildGraph(playlists, associations)
+func CreateMixStackGraph(playlists *[]*models.PlaylistSnapshot) *[]*PlaylistNode {
+	return buildGraph(playlists)
 }
 
-func buildGraph(playlists *[]*models.PlaylistSnapshot, associations *[]*models.PlaylistAssociationSnapshot) *[]*PlaylistNode {
+func buildGraph(playlists *[]*models.PlaylistSnapshot) *[]*PlaylistNode {
+	associations := []*models.PlaylistAssociationSnapshot{}
+
 	playlistIds := make([]uint, len(*playlists))
 	for i, playlist := range *playlists {
 		playlistIds[i] = playlist.ID
+
+		if playlist.Associations == nil {
+			continue
+		}
+
+		associations = append(associations, *playlist.Associations...)
 	}
 
-	topLevelPlaylistIds := getAllTopLevelPlaylistIds(&playlistIds, associations)
-	nodes := createDependencyGraph(&topLevelPlaylistIds, associations)
+	topLevelPlaylistIds := getAllTopLevelPlaylistIds(&playlistIds, &associations)
+	nodes := createDependencyGraph(&topLevelPlaylistIds, &associations)
 
 	for _, n := range *nodes {
 		setPlaylistNames(playlists, n)
@@ -74,9 +82,9 @@ func createDependencyGraphForNode(node PlaylistNode, associations *[]*models.Pla
 
 	// If we have children, dfs these...
 	for _, a := range *associations {
-		if *a.ParentPlaylistID == node.PlaylistId {
-			res := createDependencyGraphForNode(PlaylistNode{PlaylistId: *a.ChildPlaylistID}, associations, visitedPlaylistIds)
-			visitedPlaylistIds = append(visitedPlaylistIds, *a.ChildPlaylistID)
+		if a.ParentPlaylist.ID == node.PlaylistId {
+			res := createDependencyGraphForNode(PlaylistNode{PlaylistId: a.ChildPlaylist.ID}, associations, visitedPlaylistIds)
+			visitedPlaylistIds = append(visitedPlaylistIds, a.ChildPlaylist.ID)
 
 			if node.ChildrenNodes == nil {
 				node.ChildrenNodes = &[]*PlaylistNode{}
@@ -104,10 +112,10 @@ func getAllTopLevelPlaylistIds(playlistIds *[]uint, associations *[]*models.Play
 		isChild := false
 
 		for _, a := range *associations {
-			if *a.ChildPlaylistID == id {
+			if a.ChildPlaylist.ID == id {
 				isChild = true
 			}
-			if *a.ParentPlaylistID == id {
+			if a.ParentPlaylist.ID == id {
 				isParent = true
 			}
 		}
