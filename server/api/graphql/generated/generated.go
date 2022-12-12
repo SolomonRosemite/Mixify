@@ -288,7 +288,7 @@ type PlaylistSnapshotConfiguration {
 type PlaylistSnapshot {
   name: String!
   spotifyPlaylistId: String
-  playlistOrder: String
+  playlistOrder: [Int]!
   associations: [PlaylistAssociationSnapshot!]!
 }
 
@@ -314,7 +314,7 @@ input NewPlaylistSnapshot {
   name: String!
   playlistId: ID!
   spotifyPlaylistId: String
-  playlistOrder: String
+  playlistOrder: [Int]!
   associations: [NewPlaylistAssociationSnapshot!]!
 }
 
@@ -704,11 +704,14 @@ func (ec *executionContext) _PlaylistSnapshot_playlistOrder(ctx context.Context,
 		return graphql.Null
 	}
 	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
 		return graphql.Null
 	}
-	res := resTmp.(*string)
+	res := resTmp.([]*int)
 	fc.Result = res
-	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+	return ec.marshalNInt2ᚕᚖint(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_PlaylistSnapshot_playlistOrder(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -718,7 +721,7 @@ func (ec *executionContext) fieldContext_PlaylistSnapshot_playlistOrder(ctx cont
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -3038,7 +3041,7 @@ func (ec *executionContext) unmarshalInputNewPlaylistSnapshot(ctx context.Contex
 			var err error
 
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("playlistOrder"))
-			it.PlaylistOrder, err = ec.unmarshalOString2ᚖstring(ctx, v)
+			it.PlaylistOrder, err = ec.unmarshalNInt2ᚕᚖint(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -3226,6 +3229,9 @@ func (ec *executionContext) _PlaylistSnapshot(ctx context.Context, sel ast.Selec
 
 			out.Values[i] = ec._PlaylistSnapshot_playlistOrder(ctx, field, obj)
 
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "associations":
 
 			out.Values[i] = ec._PlaylistSnapshot_associations(ctx, field, obj)
@@ -3732,6 +3738,32 @@ func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.Selec
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalNInt2ᚕᚖint(ctx context.Context, v interface{}) ([]*int, error) {
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]*int, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalOInt2ᚖint(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalNInt2ᚕᚖint(ctx context.Context, sel ast.SelectionSet, v []*int) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalOInt2ᚖint(ctx, sel, v[i])
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalNNewPlaylistAssociationSnapshot2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewPlaylistAssociationSnapshotᚄ(ctx context.Context, v interface{}) ([]*model.NewPlaylistAssociationSnapshot, error) {
@@ -4250,6 +4282,22 @@ func (ec *executionContext) marshalOBoolean2ᚖbool(ctx context.Context, sel ast
 		return graphql.Null
 	}
 	res := graphql.MarshalBoolean(*v)
+	return res
+}
+
+func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := graphql.UnmarshalInt(v)
+	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.SelectionSet, v *int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	res := graphql.MarshalInt(*v)
 	return res
 }
 

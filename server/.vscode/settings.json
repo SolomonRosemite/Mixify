@@ -3,8 +3,10 @@
     "godotenv",
     "gorm",
     "gqlgen",
+    "jackc",
     "Mixify",
     "mixstack",
+    "pgtype",
     "spotifyauth"
   ]
 }

@@ -11,7 +11,7 @@ type NewPlaylistSnapshot struct {
 	Name              string                            `json:"name"`
 	PlaylistID        string                            `json:"playlistId"`
 	SpotifyPlaylistID *string                           `json:"spotifyPlaylistId"`
-	PlaylistOrder     *string                           `json:"playlistOrder"`
+	PlaylistOrder     []*int                            `json:"playlistOrder"`
 	Associations      []*NewPlaylistAssociationSnapshot `json:"associations"`
 }
 
@@ -32,7 +32,7 @@ type PlaylistAssociationSnapshot struct {
 type PlaylistSnapshot struct {
 	Name              string                         `json:"name"`
 	SpotifyPlaylistID *string                        `json:"spotifyPlaylistId"`
-	PlaylistOrder     *string                        `json:"playlistOrder"`
+	PlaylistOrder     []*int                         `json:"playlistOrder"`
 	Associations      []*PlaylistAssociationSnapshot `json:"associations"`
 }
 

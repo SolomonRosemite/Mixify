@@ -18,7 +18,7 @@ type SyncPlaylistsEvent struct {
 
 type PlaylistConfigurationSnapshot struct {
 	gorm.Model
-	SyncPlaylistsEventID uint
+	SyncPlaylistsEventID *uint
 	UserID               uint
 	Playlists            *[]*PlaylistSnapshot `gorm:"foreignKey:SnapshotID"`
 }
@@ -29,7 +29,7 @@ type PlaylistSnapshot struct {
 	SnapshotID        *uint
 	SpotifyPlaylistID *string
 	IsMixStack        *bool
-	PlaylistsOrder    *string
+	PlaylistsOrder    *string                         `gorm:"type:varchar(64);default:'[]';not null"`
 	Associations      *[]*PlaylistAssociationSnapshot `gorm:"ForeignKey:ChildPlaylistID;ParentPlaylistID"`
 }
 
