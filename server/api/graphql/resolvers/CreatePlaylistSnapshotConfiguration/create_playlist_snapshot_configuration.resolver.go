@@ -73,11 +73,11 @@ func CreatePlaylistSnapshotConfiguration(ctx *context.Context, input *model.NewP
 		return nil, err
 	}
 
-	r := createResponse(playlistSnapshotConfiguration.ID, &playlists)
+	r := CreateSnapshotResponse(playlistSnapshotConfiguration.ID, &playlists)
 	return &r, nil
 }
 
-func createResponse(snapshotID uint, dbPlaylists *[]*models.PlaylistSnapshot) model.PlaylistSnapshotConfiguration {
+func CreateSnapshotResponse(snapshotID uint, dbPlaylists *[]*models.PlaylistSnapshot) model.PlaylistSnapshotConfiguration {
 	r := model.PlaylistSnapshotConfiguration{
 		ID:        fmt.Sprint(snapshotID),
 		Playlists: createPlaylists(dbPlaylists),

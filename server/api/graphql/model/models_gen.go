@@ -19,7 +19,7 @@ type NewPlaylistSnapshotConfiguration struct {
 	Playlists []*NewPlaylistSnapshot `json:"playlists"`
 }
 
-type NewSyncLog struct {
+type NewSyncPlaylistsEvent struct {
 	SnapshotID string `json:"snapshotId"`
 }
 
@@ -42,8 +42,8 @@ type PlaylistSnapshotConfiguration struct {
 	Playlists []*PlaylistSnapshot `json:"playlists"`
 }
 
-type SyncLog struct {
-	ID         string `json:"id"`
-	UserID     string `json:"userId"`
-	SnapshotID string `json:"snapshotId"`
+type SyncPlaylistsEvent struct {
+	ID                    string                         `json:"id"`
+	UserID                string                         `json:"userId"`
+	ConfigurationSnapshot *PlaylistSnapshotConfiguration `json:"configurationSnapshot"`
 }

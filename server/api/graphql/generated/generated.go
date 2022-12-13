@@ -46,6 +46,7 @@ type DirectiveRoot struct {
 type ComplexityRoot struct {
 	Mutation struct {
 		CreatePlaylistSnapshotConfiguration func(childComplexity int, input model.NewPlaylistSnapshotConfiguration) int
+		CreateSyncPlaylistsEvent            func(childComplexity int, input model.NewSyncPlaylistsEvent) int
 	}
 
 	PlaylistAssociationSnapshot struct {
@@ -68,21 +69,22 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		SyncLogs func(childComplexity int) int
+		SyncEvents func(childComplexity int, id string) int
 	}
 
-	SyncLog struct {
-		ID         func(childComplexity int) int
-		SnapshotID func(childComplexity int) int
-		UserID     func(childComplexity int) int
+	SyncPlaylistsEvent struct {
+		ConfigurationSnapshot func(childComplexity int) int
+		ID                    func(childComplexity int) int
+		UserID                func(childComplexity int) int
 	}
 }
 
 type MutationResolver interface {
+	CreateSyncPlaylistsEvent(ctx context.Context, input model.NewSyncPlaylistsEvent) (*model.SyncPlaylistsEvent, error)
 	CreatePlaylistSnapshotConfiguration(ctx context.Context, input model.NewPlaylistSnapshotConfiguration) (*model.PlaylistSnapshotConfiguration, error)
 }
 type QueryResolver interface {
-	SyncLogs(ctx context.Context) ([]*model.SyncLog, error)
+	SyncEvents(ctx context.Context, id string) (*model.SyncPlaylistsEvent, error)
 }
 
 type executableSchema struct {
@@ -111,6 +113,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Mutation.CreatePlaylistSnapshotConfiguration(childComplexity, args["input"].(model.NewPlaylistSnapshotConfiguration)), true
+
+	case "Mutation.createSyncPlaylistsEvent":
+		if e.complexity.Mutation.CreateSyncPlaylistsEvent == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createSyncPlaylistsEvent_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateSyncPlaylistsEvent(childComplexity, args["input"].(model.NewSyncPlaylistsEvent)), true
 
 	case "PlaylistAssociationSnapshot.childPlaylistId":
 		if e.complexity.PlaylistAssociationSnapshot.ChildPlaylistID == nil {
@@ -182,33 +196,38 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PlaylistSnapshotConfiguration.Playlists(childComplexity), true
 
-	case "Query.syncLogs":
-		if e.complexity.Query.SyncLogs == nil {
+	case "Query.syncEvents":
+		if e.complexity.Query.SyncEvents == nil {
 			break
 		}
 
-		return e.complexity.Query.SyncLogs(childComplexity), true
+		args, err := ec.field_Query_syncEvents_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
 
-	case "SyncLog.id":
-		if e.complexity.SyncLog.ID == nil {
+		return e.complexity.Query.SyncEvents(childComplexity, args["id"].(string)), true
+
+	case "SyncPlaylistsEvent.configurationSnapshot":
+		if e.complexity.SyncPlaylistsEvent.ConfigurationSnapshot == nil {
 			break
 		}
 
-		return e.complexity.SyncLog.ID(childComplexity), true
+		return e.complexity.SyncPlaylistsEvent.ConfigurationSnapshot(childComplexity), true
 
-	case "SyncLog.snapshotId":
-		if e.complexity.SyncLog.SnapshotID == nil {
+	case "SyncPlaylistsEvent.id":
+		if e.complexity.SyncPlaylistsEvent.ID == nil {
 			break
 		}
 
-		return e.complexity.SyncLog.SnapshotID(childComplexity), true
+		return e.complexity.SyncPlaylistsEvent.ID(childComplexity), true
 
-	case "SyncLog.userId":
-		if e.complexity.SyncLog.UserID == nil {
+	case "SyncPlaylistsEvent.userId":
+		if e.complexity.SyncPlaylistsEvent.UserID == nil {
 			break
 		}
 
-		return e.complexity.SyncLog.UserID(childComplexity), true
+		return e.complexity.SyncPlaylistsEvent.UserID(childComplexity), true
 
 	}
 	return 0, false
@@ -221,7 +240,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputNewPlaylistAssociationSnapshot,
 		ec.unmarshalInputNewPlaylistSnapshot,
 		ec.unmarshalInputNewPlaylistSnapshotConfiguration,
-		ec.unmarshalInputNewSyncLog,
+		ec.unmarshalInputNewSyncPlaylistsEvent,
 	)
 	first := true
 
@@ -282,10 +301,10 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 }
 
 var sources = []*ast.Source{
-	{Name: "../schema.graphql", Input: `type SyncLog {
+	{Name: "../schema.graphql", Input: `type SyncPlaylistsEvent {
   id: ID!
   userId: ID!
-  snapshotId: ID!
+  configurationSnapshot: PlaylistSnapshotConfiguration!
 }
 
 type PlaylistSnapshotConfiguration {
@@ -308,10 +327,10 @@ type PlaylistAssociationSnapshot {
 }
 
 type Query {
-  syncLogs: [SyncLog!]!
+  syncEvents(id: ID!): SyncPlaylistsEvent!
 }
 
-input NewSyncLog {
+input NewSyncPlaylistsEvent {
   snapshotId: ID!
 }
 
@@ -333,7 +352,7 @@ input NewPlaylistAssociationSnapshot {
 }
 
 type Mutation {
-  # createSyncLog(input: NewSyncLog!): SyncLog!
+  createSyncPlaylistsEvent(input: NewSyncPlaylistsEvent!): SyncPlaylistsEvent!
   createPlaylistSnapshotConfiguration(
     input: NewPlaylistSnapshotConfiguration!
   ): PlaylistSnapshotConfiguration!
@@ -361,6 +380,21 @@ func (ec *executionContext) field_Mutation_createPlaylistSnapshotConfiguration_a
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_createSyncPlaylistsEvent_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.NewSyncPlaylistsEvent
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNNewSyncPlaylistsEvent2githubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewSyncPlaylistsEvent(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -373,6 +407,21 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_syncEvents_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -413,6 +462,69 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _Mutation_createSyncPlaylistsEvent(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_createSyncPlaylistsEvent(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateSyncPlaylistsEvent(rctx, fc.Args["input"].(model.NewSyncPlaylistsEvent))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.SyncPlaylistsEvent)
+	fc.Result = res
+	return ec.marshalNSyncPlaylistsEvent2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncPlaylistsEvent(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createSyncPlaylistsEvent(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_SyncPlaylistsEvent_id(ctx, field)
+			case "userId":
+				return ec.fieldContext_SyncPlaylistsEvent_userId(ctx, field)
+			case "configurationSnapshot":
+				return ec.fieldContext_SyncPlaylistsEvent_configurationSnapshot(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SyncPlaylistsEvent", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createSyncPlaylistsEvent_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
 
 func (ec *executionContext) _Mutation_createPlaylistSnapshotConfiguration(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Mutation_createPlaylistSnapshotConfiguration(ctx, field)
@@ -932,8 +1044,8 @@ func (ec *executionContext) fieldContext_PlaylistSnapshotConfiguration_playlists
 	return fc, nil
 }
 
-func (ec *executionContext) _Query_syncLogs(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_syncLogs(ctx, field)
+func (ec *executionContext) _Query_syncEvents(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_syncEvents(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -946,7 +1058,7 @@ func (ec *executionContext) _Query_syncLogs(ctx context.Context, field graphql.C
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().SyncLogs(rctx)
+		return ec.resolvers.Query().SyncEvents(rctx, fc.Args["id"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -958,12 +1070,12 @@ func (ec *executionContext) _Query_syncLogs(ctx context.Context, field graphql.C
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*model.SyncLog)
+	res := resTmp.(*model.SyncPlaylistsEvent)
 	fc.Result = res
-	return ec.marshalNSyncLog2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncLogᚄ(ctx, field.Selections, res)
+	return ec.marshalNSyncPlaylistsEvent2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncPlaylistsEvent(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Query_syncLogs(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Query_syncEvents(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Query",
 		Field:      field,
@@ -972,14 +1084,25 @@ func (ec *executionContext) fieldContext_Query_syncLogs(ctx context.Context, fie
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "id":
-				return ec.fieldContext_SyncLog_id(ctx, field)
+				return ec.fieldContext_SyncPlaylistsEvent_id(ctx, field)
 			case "userId":
-				return ec.fieldContext_SyncLog_userId(ctx, field)
-			case "snapshotId":
-				return ec.fieldContext_SyncLog_snapshotId(ctx, field)
+				return ec.fieldContext_SyncPlaylistsEvent_userId(ctx, field)
+			case "configurationSnapshot":
+				return ec.fieldContext_SyncPlaylistsEvent_configurationSnapshot(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type SyncLog", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type SyncPlaylistsEvent", field.Name)
 		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_syncEvents_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
 	}
 	return fc, nil
 }
@@ -1113,8 +1236,8 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _SyncLog_id(ctx context.Context, field graphql.CollectedField, obj *model.SyncLog) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SyncLog_id(ctx, field)
+func (ec *executionContext) _SyncPlaylistsEvent_id(ctx context.Context, field graphql.CollectedField, obj *model.SyncPlaylistsEvent) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SyncPlaylistsEvent_id(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1144,9 +1267,9 @@ func (ec *executionContext) _SyncLog_id(ctx context.Context, field graphql.Colle
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_SyncLog_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SyncPlaylistsEvent_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "SyncLog",
+		Object:     "SyncPlaylistsEvent",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -1157,8 +1280,8 @@ func (ec *executionContext) fieldContext_SyncLog_id(ctx context.Context, field g
 	return fc, nil
 }
 
-func (ec *executionContext) _SyncLog_userId(ctx context.Context, field graphql.CollectedField, obj *model.SyncLog) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SyncLog_userId(ctx, field)
+func (ec *executionContext) _SyncPlaylistsEvent_userId(ctx context.Context, field graphql.CollectedField, obj *model.SyncPlaylistsEvent) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SyncPlaylistsEvent_userId(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1188,9 +1311,9 @@ func (ec *executionContext) _SyncLog_userId(ctx context.Context, field graphql.C
 	return ec.marshalNID2string(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_SyncLog_userId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SyncPlaylistsEvent_userId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "SyncLog",
+		Object:     "SyncPlaylistsEvent",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -1201,8 +1324,8 @@ func (ec *executionContext) fieldContext_SyncLog_userId(ctx context.Context, fie
 	return fc, nil
 }
 
-func (ec *executionContext) _SyncLog_snapshotId(ctx context.Context, field graphql.CollectedField, obj *model.SyncLog) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_SyncLog_snapshotId(ctx, field)
+func (ec *executionContext) _SyncPlaylistsEvent_configurationSnapshot(ctx context.Context, field graphql.CollectedField, obj *model.SyncPlaylistsEvent) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SyncPlaylistsEvent_configurationSnapshot(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -1215,7 +1338,7 @@ func (ec *executionContext) _SyncLog_snapshotId(ctx context.Context, field graph
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.SnapshotID, nil
+		return obj.ConfigurationSnapshot, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1227,19 +1350,25 @@ func (ec *executionContext) _SyncLog_snapshotId(ctx context.Context, field graph
 		}
 		return graphql.Null
 	}
-	res := resTmp.(string)
+	res := resTmp.(*model.PlaylistSnapshotConfiguration)
 	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
+	return ec.marshalNPlaylistSnapshotConfiguration2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_SyncLog_snapshotId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_SyncPlaylistsEvent_configurationSnapshot(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
-		Object:     "SyncLog",
+		Object:     "SyncPlaylistsEvent",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_PlaylistSnapshotConfiguration_id(ctx, field)
+			case "playlists":
+				return ec.fieldContext_PlaylistSnapshotConfiguration_playlists(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PlaylistSnapshotConfiguration", field.Name)
 		},
 	}
 	return fc, nil
@@ -3142,8 +3271,8 @@ func (ec *executionContext) unmarshalInputNewPlaylistSnapshotConfiguration(ctx c
 	return it, nil
 }
 
-func (ec *executionContext) unmarshalInputNewSyncLog(ctx context.Context, obj interface{}) (model.NewSyncLog, error) {
-	var it model.NewSyncLog
+func (ec *executionContext) unmarshalInputNewSyncPlaylistsEvent(ctx context.Context, obj interface{}) (model.NewSyncPlaylistsEvent, error) {
+	var it model.NewSyncPlaylistsEvent
 	asMap := map[string]interface{}{}
 	for k, v := range obj.(map[string]interface{}) {
 		asMap[k] = v
@@ -3197,6 +3326,15 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Mutation")
+		case "createSyncPlaylistsEvent":
+
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createSyncPlaylistsEvent(ctx, field)
+			})
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		case "createPlaylistSnapshotConfiguration":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -3366,7 +3504,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
-		case "syncLogs":
+		case "syncEvents":
 			field := field
 
 			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
@@ -3375,7 +3513,7 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 						ec.Error(ctx, ec.Recover(ctx, r))
 					}
 				}()
-				res = ec._Query_syncLogs(ctx, field)
+				res = ec._Query_syncEvents(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&invalids, 1)
 				}
@@ -3412,33 +3550,33 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 	return out
 }
 
-var syncLogImplementors = []string{"SyncLog"}
+var syncPlaylistsEventImplementors = []string{"SyncPlaylistsEvent"}
 
-func (ec *executionContext) _SyncLog(ctx context.Context, sel ast.SelectionSet, obj *model.SyncLog) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, syncLogImplementors)
+func (ec *executionContext) _SyncPlaylistsEvent(ctx context.Context, sel ast.SelectionSet, obj *model.SyncPlaylistsEvent) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, syncPlaylistsEventImplementors)
 	out := graphql.NewFieldSet(fields)
 	var invalids uint32
 	for i, field := range fields {
 		switch field.Name {
 		case "__typename":
-			out.Values[i] = graphql.MarshalString("SyncLog")
+			out.Values[i] = graphql.MarshalString("SyncPlaylistsEvent")
 		case "id":
 
-			out.Values[i] = ec._SyncLog_id(ctx, field, obj)
+			out.Values[i] = ec._SyncPlaylistsEvent_id(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
 		case "userId":
 
-			out.Values[i] = ec._SyncLog_userId(ctx, field, obj)
+			out.Values[i] = ec._SyncPlaylistsEvent_userId(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
 			}
-		case "snapshotId":
+		case "configurationSnapshot":
 
-			out.Values[i] = ec._SyncLog_snapshotId(ctx, field, obj)
+			out.Values[i] = ec._SyncPlaylistsEvent_configurationSnapshot(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -3877,6 +4015,11 @@ func (ec *executionContext) unmarshalNNewPlaylistSnapshotConfiguration2githubᚗ
 	return res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalNNewSyncPlaylistsEvent2githubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐNewSyncPlaylistsEvent(ctx context.Context, v interface{}) (model.NewSyncPlaylistsEvent, error) {
+	res, err := ec.unmarshalInputNewSyncPlaylistsEvent(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNPlaylistAssociationSnapshot2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistAssociationSnapshotᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PlaylistAssociationSnapshot) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -4014,58 +4157,18 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) marshalNSyncLog2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncLogᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SyncLog) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNSyncLog2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncLog(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
+func (ec *executionContext) marshalNSyncPlaylistsEvent2githubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncPlaylistsEvent(ctx context.Context, sel ast.SelectionSet, v model.SyncPlaylistsEvent) graphql.Marshaler {
+	return ec._SyncPlaylistsEvent(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNSyncLog2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncLog(ctx context.Context, sel ast.SelectionSet, v *model.SyncLog) graphql.Marshaler {
+func (ec *executionContext) marshalNSyncPlaylistsEvent2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncPlaylistsEvent(ctx context.Context, sel ast.SelectionSet, v *model.SyncPlaylistsEvent) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
 			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
 		}
 		return graphql.Null
 	}
-	return ec._SyncLog(ctx, sel, v)
+	return ec._SyncPlaylistsEvent(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
