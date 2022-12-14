@@ -1,7 +1,7 @@
 type SyncPlaylistsEvent {
   id: ID!
   userId: ID!
-  configurationSnapshot: PlaylistSnapshotConfiguration!
+  configurationSnapshot: [PlaylistSnapshotConfiguration]!
 }
 
 type PlaylistSnapshotConfiguration {
@@ -28,7 +28,7 @@ type Query {
 }
 
 input NewSyncPlaylistsEvent {
-  snapshotId: ID!
+  configurationSnapshotId: ID!
 }
 
 input NewPlaylistSnapshotConfiguration {

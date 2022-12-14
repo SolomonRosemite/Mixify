@@ -12,25 +12,25 @@ type User struct {
 
 type SyncPlaylistsEvent struct {
 	gorm.Model
-	UserID         uint
-	Configurations *[]*PlaylistConfigurationSnapshot `gorm:"foreignKey:SyncPlaylistsEventID"`
+	UserID                          uint
+	PlaylistConfigurationSnapshotID uint
 }
 
 type PlaylistConfigurationSnapshot struct {
 	gorm.Model
-	SyncPlaylistsEventID *uint
-	UserID               uint
-	Playlists            *[]*PlaylistSnapshot `gorm:"foreignKey:SnapshotID"`
+	UserID    uint
+	Playlists *[]*PlaylistSnapshot   `gorm:"foreignKey:PlaylistConfigurationSnapshotID"`
+	Events    *[]*SyncPlaylistsEvent `gorm:"foreignKey:PlaylistConfigurationSnapshotID"`
 }
 
 type PlaylistSnapshot struct {
 	gorm.Model
-	Name              *string
-	SnapshotID        *uint
-	SpotifyPlaylistID *string
-	IsMixStack        *bool
-	PlaylistsOrder    *string                         `gorm:"type:varchar(64);default:'[]';not null"`
-	Associations      *[]*PlaylistAssociationSnapshot `gorm:"ForeignKey:ChildPlaylistID;ParentPlaylistID"`
+	Name                            *string
+	PlaylistConfigurationSnapshotID *uint
+	SpotifyPlaylistID               *string
+	IsMixStack                      *bool
+	PlaylistsOrder                  *string                         `gorm:"type:varchar(64);default:'[]';not null"`
+	Associations                    *[]*PlaylistAssociationSnapshot `gorm:"ForeignKey:ChildPlaylistID;ParentPlaylistID"`
 }
 
 type PlaylistAssociationSnapshot struct {

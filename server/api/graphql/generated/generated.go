@@ -304,7 +304,7 @@ var sources = []*ast.Source{
 	{Name: "../schema.graphql", Input: `type SyncPlaylistsEvent {
   id: ID!
   userId: ID!
-  configurationSnapshot: PlaylistSnapshotConfiguration!
+  configurationSnapshot: [PlaylistSnapshotConfiguration]!
 }
 
 type PlaylistSnapshotConfiguration {
@@ -331,7 +331,7 @@ type Query {
 }
 
 input NewSyncPlaylistsEvent {
-  snapshotId: ID!
+  configurationSnapshotId: ID!
 }
 
 input NewPlaylistSnapshotConfiguration {
@@ -1350,9 +1350,9 @@ func (ec *executionContext) _SyncPlaylistsEvent_configurationSnapshot(ctx contex
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*model.PlaylistSnapshotConfiguration)
+	res := resTmp.([]*model.PlaylistSnapshotConfiguration)
 	fc.Result = res
-	return ec.marshalNPlaylistSnapshotConfiguration2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx, field.Selections, res)
+	return ec.marshalNPlaylistSnapshotConfiguration2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_SyncPlaylistsEvent_configurationSnapshot(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3278,18 +3278,18 @@ func (ec *executionContext) unmarshalInputNewSyncPlaylistsEvent(ctx context.Cont
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"snapshotId"}
+	fieldsInOrder := [...]string{"configurationSnapshotId"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "snapshotId":
+		case "configurationSnapshotId":
 			var err error
 
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("snapshotId"))
-			it.SnapshotID, err = ec.unmarshalNID2string(ctx, v)
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("configurationSnapshotId"))
+			it.ConfigurationSnapshotID, err = ec.unmarshalNID2string(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -4132,6 +4132,44 @@ func (ec *executionContext) marshalNPlaylistSnapshotConfiguration2githubᚗcom�
 	return ec._PlaylistSnapshotConfiguration(ctx, sel, &v)
 }
 
+func (ec *executionContext) marshalNPlaylistSnapshotConfiguration2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx context.Context, sel ast.SelectionSet, v []*model.PlaylistSnapshotConfiguration) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOPlaylistSnapshotConfiguration2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	return ret
+}
+
 func (ec *executionContext) marshalNPlaylistSnapshotConfiguration2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx context.Context, sel ast.SelectionSet, v *model.PlaylistSnapshotConfiguration) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -4464,6 +4502,13 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	}
 	res := graphql.MarshalInt(*v)
 	return res
+}
+
+func (ec *executionContext) marshalOPlaylistSnapshotConfiguration2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx context.Context, sel ast.SelectionSet, v *model.PlaylistSnapshotConfiguration) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._PlaylistSnapshotConfiguration(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {

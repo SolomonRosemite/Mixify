@@ -23,21 +23,35 @@ func SyncEvents(ctx context.Context, id string, db *gorm.DB) (*model.SyncPlaylis
 		return nil, err
 	}
 
-	event, err := getPlaylistConfigById(db, &syncEventID, &userID)
+	event, configs, err := getPlaylistConfigById(db, &syncEventID, &userID)
 
 	if err != nil {
 		return nil, err
 	}
 
-	config := (*event.Configurations)[0]
-	snapshotConfigRes := createPlaylistSnapshotConfiguration.CreateSnapshotResponse(config.ID, config.Playlists)
-	res := model.SyncPlaylistsEvent{ID: fmt.Sprint(event.ID), UserID: fmt.Sprint(userID), ConfigurationSnapshot: &snapshotConfigRes}
+	configSnapshots := []*model.PlaylistSnapshotConfiguration{}
+	for _, c := range *configs {
+		snapshotConfigRes := createPlaylistSnapshotConfiguration.CreateSnapshotResponse(c.ID, c.Playlists)
+		configSnapshots = append(configSnapshots, &snapshotConfigRes)
+	}
 
+	res := model.SyncPlaylistsEvent{ID: fmt.Sprint(event.ID), UserID: fmt.Sprint(userID), ConfigurationSnapshot: configSnapshots}
 	return &res, nil
 }
 
-func getPlaylistConfigById(db *gorm.DB, ID *uint, userID *uint) (*models.SyncPlaylistsEvent, error) {
+func getPlaylistConfigById(db *gorm.DB, ID *uint, userID *uint) (*models.SyncPlaylistsEvent, *[]*models.PlaylistConfigurationSnapshot, error) {
 	event := models.SyncPlaylistsEvent{}
-	err := db.Preload("Configurations.Playlists.Associations").Model(&event).First(&event, "id = ? AND user_id = ?", ID, userID).Error
-	return &event, err
+	configurations := []*models.PlaylistConfigurationSnapshot{}
+
+	if err := db.Model(&event).First(&event, "id = ? AND user_id = ?", ID, userID).Error; err != nil {
+		return nil, nil, err
+	}
+
+	err := db.Preload("Playlists.Associations").Where("id = ?", event.PlaylistConfigurationSnapshotID).Find(&configurations).Error
+
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return &event, &configurations, nil
 }

@@ -27,7 +27,7 @@ func main() {
 		panic(err)
 	}
 
-	if err = gormDB.AutoMigrate(&models.User{}, &models.SyncPlaylistsEvent{}, &models.PlaylistConfigurationSnapshot{}, &models.PlaylistAssociationSnapshot{}, &models.PlaylistSnapshot{}); err != nil {
+	if err = gormDB.AutoMigrate(&models.User{}, &models.PlaylistConfigurationSnapshot{}, &models.SyncPlaylistsEvent{}, &models.PlaylistAssociationSnapshot{}, &models.PlaylistSnapshot{}); err != nil {
 		panic(err)
 	}
 
