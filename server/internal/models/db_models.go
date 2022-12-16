@@ -40,3 +40,16 @@ type PlaylistAssociationSnapshot struct {
 	ChildPlaylist    *PlaylistSnapshot
 	ParentPlaylist   *PlaylistSnapshot
 }
+
+type PlaylistTrackAssociationSnapshot struct {
+	gorm.Model
+	PlaylistID *uint
+	Playlist   *PlaylistSnapshot
+	TrackID    *uint
+	Track      *PlaylistTrackSnapshot
+}
+
+type PlaylistTrackSnapshot struct {
+	gorm.Model
+	SpotifyTrackID *string `gorm:"type:varchar(64)"`
+}
