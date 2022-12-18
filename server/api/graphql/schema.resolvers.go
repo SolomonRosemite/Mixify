@@ -15,7 +15,8 @@ import (
 
 // CreateSyncPlaylistsEvent is the resolver for the createSyncPlaylistsEvent field.
 func (r *mutationResolver) CreateSyncPlaylistsEvent(ctx context.Context, input model.NewSyncPlaylistsEvent) (*model.SyncPlaylistsEvent, error) {
-	return createSyncPlaylistsEvent.CreateSyncPlaylistsEvent(ctx, input, r.DB.DB)
+	// TODO: Remove test user in the future
+	return createSyncPlaylistsEvent.CreateSyncPlaylistsEvent(ctx, input, r.DB.DB, (*r.SpotifyUserAccess)["user_id:1"])
 }
 
 // CreatePlaylistSnapshotConfiguration is the resolver for the createPlaylistSnapshotConfiguration field.

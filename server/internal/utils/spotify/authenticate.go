@@ -20,7 +20,7 @@ var err = godotenv.Load("dev.env")
 var redirectURI = os.Getenv("SPOTIFY_REDIRECT_URI")
 
 var (
-	auth  = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopePlaylistModifyPrivate))
+	auth  = spotifyauth.New(spotifyauth.WithRedirectURL(redirectURI), spotifyauth.WithScopes(spotifyauth.ScopePlaylistModifyPrivate, spotifyauth.ScopePlaylistReadCollaborative))
 	ch    = make(chan *spotify.Client)
 	state = "abc123"
 )
@@ -33,7 +33,8 @@ func AuthenticateUser() (*spotify.Client, error) {
 	// First start an HTTP server
 	http.HandleFunc("/callback", completeAuth)
 	go func() {
-		err := http.ListenAndServe(":8080", nil)
+		// For this to work in docker, this may have to be reverted to ":8080"
+		err := http.ListenAndServe("localhost:8080", nil)
 		if err != nil {
 			log.Fatal(err)
 		}
