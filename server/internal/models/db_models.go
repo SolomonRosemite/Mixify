@@ -28,7 +28,7 @@ type PlaylistSnapshot struct {
 	Name                            *string
 	PlaylistConfigurationSnapshotID *uint
 	SpotifyPlaylistID               *string
-	IsMixStack                      *bool
+	IsMixStack                      *bool                           `gorm:"type:boolean;default:false;not null"`
 	PlaylistsOrder                  *string                         `gorm:"type:varchar(64);default:'[]';not null"`
 	Associations                    *[]*PlaylistAssociationSnapshot `gorm:"ForeignKey:ChildPlaylistID;ParentPlaylistID"`
 }
@@ -39,4 +39,17 @@ type PlaylistAssociationSnapshot struct {
 	ParentPlaylistID *uint
 	ChildPlaylist    *PlaylistSnapshot
 	ParentPlaylist   *PlaylistSnapshot
+}
+
+type PlaylistTrackAssociationSnapshot struct {
+	gorm.Model
+	PlaylistID *uint
+	Playlist   *PlaylistSnapshot
+	TrackID    *uint
+	Track      *PlaylistTrackSnapshot
+}
+
+type PlaylistTrackSnapshot struct {
+	gorm.Model
+	SpotifyTrackID *string `gorm:"type:varchar(64)"`
 }

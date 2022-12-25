@@ -187,6 +187,8 @@ func assignAssociations(p *model.NewPlaylistSnapshot, playlists *[]*models.Playl
 		// Because of that we can skip creating another association when iterating over the parent.
 		// This will prevent duplicated associations in the database.
 		if parentPlaylistID == playlistID {
+			// Only playlists that are the parent are mix stacks
+			getPlaylistById(&parentPlaylistID, playlists).IsMixStack = common.LiteralToPtr(true)
 			continue
 		}
 

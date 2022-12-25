@@ -8,10 +8,12 @@ import (
 	createPlaylistSnapshotConfiguration "github.com/SolomonRosemite/Mixify/api/graphql/resolvers/CreatePlaylistSnapshotConfiguration"
 	"github.com/SolomonRosemite/Mixify/internal/models"
 	"github.com/SolomonRosemite/Mixify/internal/utils/common"
+	"github.com/SolomonRosemite/Mixify/internal/utils/mixify"
+	"github.com/zmb3/spotify/v2"
 	"gorm.io/gorm"
 )
 
-func CreateSyncPlaylistsEvent(ctx context.Context, input model.NewSyncPlaylistsEvent, db *gorm.DB) (*model.SyncPlaylistsEvent, error) {
+func CreateSyncPlaylistsEvent(ctx context.Context, input model.NewSyncPlaylistsEvent, db *gorm.DB, client *spotify.Client) (*model.SyncPlaylistsEvent, error) {
 	ID, err := common.StringToUint(input.ConfigurationSnapshotID, 32)
 	// TODO: Replace test user id
 	userID := uint(1)
@@ -20,7 +22,7 @@ func CreateSyncPlaylistsEvent(ctx context.Context, input model.NewSyncPlaylistsE
 		return nil, err
 	}
 
-	event, configs, err := createEvent(&ID, &userID, db)
+	event, configs, err := createEvent(&ID, &userID, db, client)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +37,7 @@ func CreateSyncPlaylistsEvent(ctx context.Context, input model.NewSyncPlaylistsE
 	return &res, nil
 }
 
-func createEvent(ID *uint, userID *uint, db *gorm.DB) (*models.SyncPlaylistsEvent, *[]*models.PlaylistConfigurationSnapshot, error) {
+func createEvent(ID *uint, userID *uint, db *gorm.DB, client *spotify.Client) (*models.SyncPlaylistsEvent, *[]*models.PlaylistConfigurationSnapshot, error) {
 	configs := []*models.PlaylistConfigurationSnapshot{}
 	err := db.Preload("Playlists.Associations").Where("id = ? AND user_id = ?", ID, userID).Find(&configs).Error
 
@@ -45,6 +47,9 @@ func createEvent(ID *uint, userID *uint, db *gorm.DB) (*models.SyncPlaylistsEven
 
 	syncEvent := models.SyncPlaylistsEvent{UserID: *userID, PlaylistConfigurationSnapshotID: *ID}
 	err = db.Save(&syncEvent).Error
+
+	// Start sync event for creating and updating mix stacks
+	go mixify.StartSync(ID, db, client)
 
 	return &syncEvent, &configs, err
 }

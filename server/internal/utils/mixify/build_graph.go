@@ -7,9 +7,11 @@ import (
 )
 
 type PlaylistNode struct {
-	PlaylistId    uint
-	Name          string
-	ChildrenNodes *[]*PlaylistNode
+	Name              string
+	SpotifyPlaylistId string
+	PlaylistId        uint
+	PlaylistBuilt     bool
+	ChildrenNodes     *[]*PlaylistNode
 }
 
 func CreateMixStackGraph(playlists *[]*models.PlaylistSnapshot) *[]*PlaylistNode {
