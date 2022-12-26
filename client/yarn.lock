@@ -349,6 +349,18 @@
     "@nodelib/fs.scandir" "2.1.5"
     fastq "^1.6.0"
 
+"@tanstack/query-core@4.20.4":
+  version "4.20.4"
+  resolved "https://registry.yarnpkg.com/@tanstack/query-core/-/query-core-4.20.4.tgz#1f7975a2db26a8bc2f382bad8a44cd422c846b17"
+  integrity sha512-lhLtGVNJDsJ/DyZXrLzekDEywQqRVykgBqTmkv0La32a/RleILXy6JMLBb7UmS3QCatg/F/0N9/5b0i5j6IKcA==
+
+"@tanstack/solid-query@^4.20.4":
+  version "4.20.4"
+  resolved "https://registry.yarnpkg.com/@tanstack/solid-query/-/solid-query-4.20.4.tgz#6491e1742b0272e7cd64a64c490c1cba9abd8cc3"
+  integrity sha512-90ANnQLdnnkN8q/mn8O22+u5O1BghqITKdrbUbjvxJ+z2NLLWiEdDqnXo4KVJb7/7EPv8ik9gijO7EzqLp39Jw==
+  dependencies:
+    "@tanstack/query-core" "4.20.4"
+
 acorn-node@^1.8.2:
   version "1.8.2"
   resolved "https://registry.yarnpkg.com/acorn-node/-/acorn-node-1.8.2.tgz#114c95d64539e53dede23de8b9d96df7c7ae2af8"

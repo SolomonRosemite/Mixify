@@ -1,10 +1,17 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
 import type { Component } from "solid-js";
 import EmailConfirmationPage from "./app/pages/EmailConfirmationPage";
-import LandingPage from "./app/pages/LandingPage";
 import PlaylistBuilderPage from "./app/pages/PlaylistBuilderPage";
+import LandingPage from "./app/pages/LandingPage";
 
-// const App: Component = () => <LandingPage />;
-// const App: Component = () => <EmailConfirmationPage />;
-const App: Component = () => <PlaylistBuilderPage />;
+const queryClient = new QueryClient();
+
+const App: Component = () => (
+  <QueryClientProvider client={queryClient}>
+    <LandingPage />
+    {/* <PlaylistBuilderPage /> */}
+    {/* <EmailConfirmationPage /> */}
+  </QueryClientProvider>
+);
 
 export default App;
