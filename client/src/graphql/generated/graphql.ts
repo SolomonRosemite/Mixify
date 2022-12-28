@@ -81,7 +81,6 @@ export type Query = {
   confirmConfirmationCode: User;
   requestConfirmationCode: RequestConfirmationCodeResponse;
   syncEvents: SyncPlaylistsEvent;
-  test: Scalars['ID'];
 };
 
 
@@ -121,6 +120,14 @@ export type User = {
   username: Scalars['String'];
 };
 
+export type ConfirmConfirmationCodeQueryVariables = Exact<{
+  code: Scalars['String'];
+  secret: Scalars['String'];
+}>;
+
+
+export type ConfirmConfirmationCodeQuery = { __typename?: 'Query', confirmConfirmationCode: { __typename?: 'User', email: string, id: string } };
+
 export type RequestUserConfirmationCodeQueryVariables = Exact<{
   email: Scalars['String'];
 }>;
@@ -131,6 +138,19 @@ export type RequestUserConfirmationCodeQuery = { __typename?: 'Query', requestCo
 
 
 
+
+export const ConfirmConfirmationCodeDocument = gql`
+    query ConfirmConfirmationCode($code: String!, $secret: String!) {
+  confirmConfirmationCode(confirmationCode: $code, confirmationSecret: $secret) {
+    email
+    id
+  }
+}
+    `;
+
+export function useConfirmConfirmationCodeQuery(options: Omit<Urql.CreateQueryArgs<ConfirmConfirmationCodeQueryVariables>, 'query'>) {
+  return Urql.createQuery<ConfirmConfirmationCodeQuery, ConfirmConfirmationCodeQueryVariables>({ query: ConfirmConfirmationCodeDocument, ...options });
+};
 export const RequestUserConfirmationCodeDocument = gql`
     query RequestUserConfirmationCode($email: String!) {
   requestConfirmationCode(email: $email) {

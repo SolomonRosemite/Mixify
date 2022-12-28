@@ -1,19 +1,35 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/solid-query";
+import { Route, Routes } from "@solidjs/router";
 import type { Component } from "solid-js";
-import EmailConfirmationPage from "./app/pages/EmailConfirmationPage";
-import PlaylistBuilderPage from "./app/pages/PlaylistBuilderPage";
-import LandingPage from "./app/pages/LandingPage";
+import { createStore } from "solid-js/store";
 import { createClient, Provider } from "solid-urql";
+import EmailConfirmationPage from "./app/pages/EmailConfirmationPage";
+import LandingPage from "./app/pages/LandingPage";
+import NotFoundPage from "./app/pages/NotFoundPage";
+import PlaylistBuilderPage from "./app/pages/PlaylistBuilderPage";
+import { AppStore } from "./types/types";
 
 export const graphqlUrl = "http://localhost:5000/query";
 const client = createClient({ url: graphqlUrl });
 
-const App: Component = () => (
-  <Provider value={client}>
-    <LandingPage />
-    {/* <PlaylistBuilderPage /> */}
-    {/* <EmailConfirmationPage /> */}
-  </Provider>
-);
+const App: Component = () => {
+  const store = createStore<AppStore>({});
+
+  return (
+    <Provider value={client}>
+      <Routes>
+        <Route path="/" component={LandingPage} />
+        <Route
+          path="/confirmation/:id"
+          element={<EmailConfirmationPage appStore={store} />}
+        />
+        <Route
+          path="/dashboard"
+          element={<PlaylistBuilderPage appStore={store} />}
+        />
+        <Route path="/*" element={<NotFoundPage />} />
+      </Routes>
+    </Provider>
+  );
+};
 
 export default App;
