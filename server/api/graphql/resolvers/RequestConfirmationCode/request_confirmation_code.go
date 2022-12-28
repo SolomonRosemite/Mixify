@@ -20,13 +20,13 @@ func RequestConfirmationCode(ctx context.Context, email string, codes *map[strin
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	var confirmationCode string = generateRandomString(random, 4)
-	var confirmationSecret string = generateRandomString(random, 10)
+	var confirmationSecret string = generateRandomString(random, 256)
 
 	for {
 		// If the confirmation combination already exists, generate a new one
 		if _, found := (*codes)[confirmationCode+confirmationSecret]; found {
 			confirmationCode = generateRandomString(random, 4)
-			confirmationSecret = generateRandomString(random, 10)
+			confirmationSecret = generateRandomString(random, 256)
 		} else {
 			break
 		}
