@@ -1,12 +1,41 @@
-import type { Component } from "solid-js";
+import { useNavigate, useParams } from "@solidjs/router";
+import { createSignal } from "solid-js";
+import { produce } from "solid-js/store";
+import { graphqlUrl } from "../../App";
+import { useConfirmConfirmationCodeQuery } from "../../graphql/generated/graphql";
+import { ComponentWithAppStore } from "../../types/types";
+import { toPromise } from "../../utils/gql/query-converter";
 
-interface EmailConfirmationPageProps {
-  confirmationSecretCode: string;
-}
+const EmailConfirmationPage: ComponentWithAppStore = ({ appStore }) => {
+  const navigate = useNavigate();
+  const params = useParams();
+  const [, setStore] = appStore;
 
-const EmailConfirmationPage: Component<EmailConfirmationPageProps> = ({
-  confirmationSecretCode,
-}) => {
+  const [confirmationSecret, setConfirmationSecret] = createSignal(params.id);
+  const [confirmationCode, setConfirmationCode] = createSignal("");
+
+  const handleConfirmationCodeChange = (e: Event) => {
+    const target = e.target as HTMLInputElement;
+    setConfirmationCode(target.value);
+  };
+
+  const handleSignInClick = async () => {
+    console.log(confirmationSecret(), confirmationCode());
+    const response = await confirmConfirmationCode(
+      confirmationCode(),
+      confirmationSecret()
+    );
+
+    if (response.error) {
+      console.error(response.error);
+      return;
+    }
+
+    const { email, id } = response.data!.confirmConfirmationCode;
+    setStore(produce((store) => (store.user = { email, id })));
+    navigate("/dashboard");
+  };
+
   return (
     <div class="my-80">
       <div>
@@ -33,12 +62,15 @@ const EmailConfirmationPage: Component<EmailConfirmationPageProps> = ({
                 <span class="label-text">Confirmation Code</span>
               </label>
               <input
+                class="input input-bordered w-full max-w-xs"
                 type="text"
                 placeholder="Code"
-                class="input input-bordered w-full max-w-xs"
+                oninput={handleConfirmationCodeChange}
               />
             </div>
-            <button class="block btn my-2">Sign in</button>
+            <button class="block btn my-2" onClick={handleSignInClick}>
+              Sign in
+            </button>
             <p>
               Still never received any mail? <a class="link">Resent code.</a>
             </p>
@@ -53,6 +85,18 @@ const EmailConfirmationPage: Component<EmailConfirmationPageProps> = ({
       </div>
     </div>
   );
+};
+
+const confirmConfirmationCode = (code: string, secret: string) => {
+  const [, state] = useConfirmConfirmationCodeQuery({
+    context: {
+      // When refetching a query the provided solid urql client can not be found for some reason.
+      // This is why we have to provide the url manually.
+      url: graphqlUrl,
+    },
+    variables: { code, secret },
+  });
+  return toPromise(state);
 };
 
 export default EmailConfirmationPage;

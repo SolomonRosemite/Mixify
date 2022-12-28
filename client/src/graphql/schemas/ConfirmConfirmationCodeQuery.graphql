@@ -1,0 +1,9 @@
+query ConfirmConfirmationCode($code: String!, $secret: String!) {
+  confirmConfirmationCode(
+    confirmationCode: $code
+    confirmationSecret: $secret
+  ) {
+    email
+    id
+  }
+}

@@ -13,9 +13,14 @@ import { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/
  * Therefore it is highly recommended to use the babel-plugin for production.
  */
 const documents = {
+    "query ConfirmConfirmationCode($code: String!, $secret: String!) {\n  confirmConfirmationCode(confirmationCode: $code, confirmationSecret: $secret) {\n    email\n    id\n  }\n}": types.ConfirmConfirmationCodeDocument,
     "query RequestUserConfirmationCode($email: String!) {\n  requestConfirmationCode(email: $email) {\n    confirmationSecret\n  }\n}": types.RequestUserConfirmationCodeDocument,
 };
 
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "query ConfirmConfirmationCode($code: String!, $secret: String!) {\n  confirmConfirmationCode(confirmationCode: $code, confirmationSecret: $secret) {\n    email\n    id\n  }\n}"): (typeof documents)["query ConfirmConfirmationCode($code: String!, $secret: String!) {\n  confirmConfirmationCode(confirmationCode: $code, confirmationSecret: $secret) {\n    email\n    id\n  }\n}"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
