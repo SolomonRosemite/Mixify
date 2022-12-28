@@ -10,6 +10,7 @@ import (
 	"github.com/SolomonRosemite/Mixify/api/graphql"
 	"github.com/SolomonRosemite/Mixify/api/graphql/generated"
 	"github.com/SolomonRosemite/Mixify/db"
+	"github.com/SolomonRosemite/Mixify/internal/models"
 	spotifyUtil "github.com/SolomonRosemite/Mixify/internal/utils/spotify"
 	"github.com/zmb3/spotify/v2"
 )
@@ -34,7 +35,7 @@ func StartServer(DB *db.DBWrapper) {
 	spotifyUserAccessResolver["user_id:1"] = user
 
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graphql.Resolver{
-		DB: DB, SpotifyUserAccess: &spotifyUserAccessResolver}}))
+		DB: DB, SpotifyUserAccess: &spotifyUserAccessResolver, EmailConfirmationCodes: &map[string]*models.EmailConfirmation{}}}))
 
 	http.Handle("/playground", playground.Handler("GraphQL playground", "/query"))
 	http.Handle("/query", srv)

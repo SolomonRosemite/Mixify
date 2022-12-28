@@ -69,13 +69,27 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		SyncEvents func(childComplexity int, id string) int
+		ConfirmConfirmationCode func(childComplexity int, confirmationCode string, confirmationSecret *string) int
+		RequestConfirmationCode func(childComplexity int, email string) int
+		SyncEvents              func(childComplexity int, id string) int
+	}
+
+	RequestConfirmationCodeResponse struct {
+		ConfirmationSecret func(childComplexity int) int
 	}
 
 	SyncPlaylistsEvent struct {
 		ConfigurationSnapshot func(childComplexity int) int
 		ID                    func(childComplexity int) int
 		UserID                func(childComplexity int) int
+	}
+
+	User struct {
+		Email         func(childComplexity int) int
+		ID            func(childComplexity int) int
+		SpotifyUserID func(childComplexity int) int
+		SyncEvents    func(childComplexity int) int
+		Username      func(childComplexity int) int
 	}
 }
 
@@ -84,6 +98,8 @@ type MutationResolver interface {
 	CreatePlaylistSnapshotConfiguration(ctx context.Context, input model.NewPlaylistSnapshotConfiguration) (*model.PlaylistSnapshotConfiguration, error)
 }
 type QueryResolver interface {
+	RequestConfirmationCode(ctx context.Context, email string) (*model.RequestConfirmationCodeResponse, error)
+	ConfirmConfirmationCode(ctx context.Context, confirmationCode string, confirmationSecret *string) (*model.User, error)
 	SyncEvents(ctx context.Context, id string) (*model.SyncPlaylistsEvent, error)
 }
 
@@ -196,6 +212,30 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PlaylistSnapshotConfiguration.Playlists(childComplexity), true
 
+	case "Query.confirmConfirmationCode":
+		if e.complexity.Query.ConfirmConfirmationCode == nil {
+			break
+		}
+
+		args, err := ec.field_Query_confirmConfirmationCode_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.ConfirmConfirmationCode(childComplexity, args["confirmationCode"].(string), args["confirmationSecret"].(*string)), true
+
+	case "Query.requestConfirmationCode":
+		if e.complexity.Query.RequestConfirmationCode == nil {
+			break
+		}
+
+		args, err := ec.field_Query_requestConfirmationCode_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.RequestConfirmationCode(childComplexity, args["email"].(string)), true
+
 	case "Query.syncEvents":
 		if e.complexity.Query.SyncEvents == nil {
 			break
@@ -207,6 +247,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.SyncEvents(childComplexity, args["id"].(string)), true
+
+	case "RequestConfirmationCodeResponse.confirmationSecret":
+		if e.complexity.RequestConfirmationCodeResponse.ConfirmationSecret == nil {
+			break
+		}
+
+		return e.complexity.RequestConfirmationCodeResponse.ConfirmationSecret(childComplexity), true
 
 	case "SyncPlaylistsEvent.configurationSnapshot":
 		if e.complexity.SyncPlaylistsEvent.ConfigurationSnapshot == nil {
@@ -228,6 +275,41 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.SyncPlaylistsEvent.UserID(childComplexity), true
+
+	case "User.email":
+		if e.complexity.User.Email == nil {
+			break
+		}
+
+		return e.complexity.User.Email(childComplexity), true
+
+	case "User.id":
+		if e.complexity.User.ID == nil {
+			break
+		}
+
+		return e.complexity.User.ID(childComplexity), true
+
+	case "User.spotifyUserId":
+		if e.complexity.User.SpotifyUserID == nil {
+			break
+		}
+
+		return e.complexity.User.SpotifyUserID(childComplexity), true
+
+	case "User.syncEvents":
+		if e.complexity.User.SyncEvents == nil {
+			break
+		}
+
+		return e.complexity.User.SyncEvents(childComplexity), true
+
+	case "User.username":
+		if e.complexity.User.Username == nil {
+			break
+		}
+
+		return e.complexity.User.Username(childComplexity), true
 
 	}
 	return 0, false
@@ -326,7 +408,24 @@ type PlaylistAssociationSnapshot {
   parentPlaylistId: ID!
 }
 
+type RequestConfirmationCodeResponse {
+  confirmationSecret: String!
+}
+
+type User {
+  id: ID!
+  email: String!
+  username: String!
+  spotifyUserId: String!
+  syncEvents: [SyncPlaylistsEvent!]!
+}
+
 type Query {
+  requestConfirmationCode(email: String!): RequestConfirmationCodeResponse!
+  confirmConfirmationCode(
+    confirmationCode: String!
+    confirmationSecret: String
+  ): User!
   syncEvents(id: ID!): SyncPlaylistsEvent!
 }
 
@@ -407,6 +506,45 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_confirmConfirmationCode_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["confirmationCode"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("confirmationCode"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["confirmationCode"] = arg0
+	var arg1 *string
+	if tmp, ok := rawArgs["confirmationSecret"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("confirmationSecret"))
+		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["confirmationSecret"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_requestConfirmationCode_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["email"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("email"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["email"] = arg0
 	return args, nil
 }
 
@@ -1044,6 +1182,132 @@ func (ec *executionContext) fieldContext_PlaylistSnapshotConfiguration_playlists
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_requestConfirmationCode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_requestConfirmationCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().RequestConfirmationCode(rctx, fc.Args["email"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.RequestConfirmationCodeResponse)
+	fc.Result = res
+	return ec.marshalNRequestConfirmationCodeResponse2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐRequestConfirmationCodeResponse(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_requestConfirmationCode(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "confirmationSecret":
+				return ec.fieldContext_RequestConfirmationCodeResponse_confirmationSecret(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type RequestConfirmationCodeResponse", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_requestConfirmationCode_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_confirmConfirmationCode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_confirmConfirmationCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().ConfirmConfirmationCode(rctx, fc.Args["confirmationCode"].(string), fc.Args["confirmationSecret"].(*string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.User)
+	fc.Result = res
+	return ec.marshalNUser2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐUser(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_confirmConfirmationCode(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_User_id(ctx, field)
+			case "email":
+				return ec.fieldContext_User_email(ctx, field)
+			case "username":
+				return ec.fieldContext_User_username(ctx, field)
+			case "spotifyUserId":
+				return ec.fieldContext_User_spotifyUserId(ctx, field)
+			case "syncEvents":
+				return ec.fieldContext_User_syncEvents(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_confirmConfirmationCode_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_syncEvents(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_syncEvents(ctx, field)
 	if err != nil {
@@ -1236,6 +1500,50 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 	return fc, nil
 }
 
+func (ec *executionContext) _RequestConfirmationCodeResponse_confirmationSecret(ctx context.Context, field graphql.CollectedField, obj *model.RequestConfirmationCodeResponse) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_RequestConfirmationCodeResponse_confirmationSecret(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ConfirmationSecret, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_RequestConfirmationCodeResponse_confirmationSecret(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RequestConfirmationCodeResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _SyncPlaylistsEvent_id(ctx context.Context, field graphql.CollectedField, obj *model.SyncPlaylistsEvent) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_SyncPlaylistsEvent_id(ctx, field)
 	if err != nil {
@@ -1369,6 +1677,234 @@ func (ec *executionContext) fieldContext_SyncPlaylistsEvent_configurationSnapsho
 				return ec.fieldContext_PlaylistSnapshotConfiguration_playlists(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type PlaylistSnapshotConfiguration", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_id(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_User_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_email(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_email(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Email, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_User_email(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_username(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_username(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Username, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_User_username(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_spotifyUserId(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_spotifyUserId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SpotifyUserID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_User_spotifyUserId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_syncEvents(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_User_syncEvents(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.SyncEvents, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*model.SyncPlaylistsEvent)
+	fc.Result = res
+	return ec.marshalNSyncPlaylistsEvent2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncPlaylistsEventᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_User_syncEvents(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_SyncPlaylistsEvent_id(ctx, field)
+			case "userId":
+				return ec.fieldContext_SyncPlaylistsEvent_userId(ctx, field)
+			case "configurationSnapshot":
+				return ec.fieldContext_SyncPlaylistsEvent_configurationSnapshot(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SyncPlaylistsEvent", field.Name)
 		},
 	}
 	return fc, nil
@@ -3504,6 +4040,52 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
+		case "requestConfirmationCode":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_requestConfirmationCode(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
+		case "confirmConfirmationCode":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_confirmConfirmationCode(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
 		case "syncEvents":
 			field := field
 
@@ -3550,6 +4132,34 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 	return out
 }
 
+var requestConfirmationCodeResponseImplementors = []string{"RequestConfirmationCodeResponse"}
+
+func (ec *executionContext) _RequestConfirmationCodeResponse(ctx context.Context, sel ast.SelectionSet, obj *model.RequestConfirmationCodeResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, requestConfirmationCodeResponseImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RequestConfirmationCodeResponse")
+		case "confirmationSecret":
+
+			out.Values[i] = ec._RequestConfirmationCodeResponse_confirmationSecret(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
 var syncPlaylistsEventImplementors = []string{"SyncPlaylistsEvent"}
 
 func (ec *executionContext) _SyncPlaylistsEvent(ctx context.Context, sel ast.SelectionSet, obj *model.SyncPlaylistsEvent) graphql.Marshaler {
@@ -3577,6 +4187,62 @@ func (ec *executionContext) _SyncPlaylistsEvent(ctx context.Context, sel ast.Sel
 		case "configurationSnapshot":
 
 			out.Values[i] = ec._SyncPlaylistsEvent_configurationSnapshot(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var userImplementors = []string{"User"}
+
+func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj *model.User) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, userImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("User")
+		case "id":
+
+			out.Values[i] = ec._User_id(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "email":
+
+			out.Values[i] = ec._User_email(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "username":
+
+			out.Values[i] = ec._User_username(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "spotifyUserId":
+
+			out.Values[i] = ec._User_spotifyUserId(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "syncEvents":
+
+			out.Values[i] = ec._User_syncEvents(ctx, field, obj)
 
 			if out.Values[i] == graphql.Null {
 				invalids++
@@ -4180,6 +4846,20 @@ func (ec *executionContext) marshalNPlaylistSnapshotConfiguration2ᚖgithubᚗco
 	return ec._PlaylistSnapshotConfiguration(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNRequestConfirmationCodeResponse2githubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐRequestConfirmationCodeResponse(ctx context.Context, sel ast.SelectionSet, v model.RequestConfirmationCodeResponse) graphql.Marshaler {
+	return ec._RequestConfirmationCodeResponse(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNRequestConfirmationCodeResponse2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐRequestConfirmationCodeResponse(ctx context.Context, sel ast.SelectionSet, v *model.RequestConfirmationCodeResponse) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RequestConfirmationCodeResponse(ctx, sel, v)
+}
+
 func (ec *executionContext) unmarshalNString2string(ctx context.Context, v interface{}) (string, error) {
 	res, err := graphql.UnmarshalString(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -4199,6 +4879,50 @@ func (ec *executionContext) marshalNSyncPlaylistsEvent2githubᚗcomᚋSolomonRos
 	return ec._SyncPlaylistsEvent(ctx, sel, &v)
 }
 
+func (ec *executionContext) marshalNSyncPlaylistsEvent2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncPlaylistsEventᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.SyncPlaylistsEvent) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNSyncPlaylistsEvent2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncPlaylistsEvent(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
 func (ec *executionContext) marshalNSyncPlaylistsEvent2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐSyncPlaylistsEvent(ctx context.Context, sel ast.SelectionSet, v *model.SyncPlaylistsEvent) graphql.Marshaler {
 	if v == nil {
 		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
@@ -4207,6 +4931,20 @@ func (ec *executionContext) marshalNSyncPlaylistsEvent2ᚖgithubᚗcomᚋSolomon
 		return graphql.Null
 	}
 	return ec._SyncPlaylistsEvent(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNUser2githubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v model.User) graphql.Marshaler {
+	return ec._User(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNUser2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐUser(ctx context.Context, sel ast.SelectionSet, v *model.User) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._User(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {
