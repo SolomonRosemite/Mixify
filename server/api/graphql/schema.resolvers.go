@@ -8,8 +8,10 @@ import (
 
 	"github.com/SolomonRosemite/Mixify/api/graphql/generated"
 	"github.com/SolomonRosemite/Mixify/api/graphql/model"
+	confirmConfirmationCode "github.com/SolomonRosemite/Mixify/api/graphql/resolvers/ConfirmConfirmationCode"
 	createPlaylistSnapshotConfiguration "github.com/SolomonRosemite/Mixify/api/graphql/resolvers/CreatePlaylistSnapshotConfiguration"
 	createSyncPlaylistsEvent "github.com/SolomonRosemite/Mixify/api/graphql/resolvers/CreateSyncPlaylistsEvent"
+	requestConfirmationCode "github.com/SolomonRosemite/Mixify/api/graphql/resolvers/RequestConfirmationCode"
 	syncEvents "github.com/SolomonRosemite/Mixify/api/graphql/resolvers/SyncEvents"
 )
 
@@ -22,6 +24,16 @@ func (r *mutationResolver) CreateSyncPlaylistsEvent(ctx context.Context, input m
 // CreatePlaylistSnapshotConfiguration is the resolver for the createPlaylistSnapshotConfiguration field.
 func (r *mutationResolver) CreatePlaylistSnapshotConfiguration(ctx context.Context, input model.NewPlaylistSnapshotConfiguration) (*model.PlaylistSnapshotConfiguration, error) {
 	return createPlaylistSnapshotConfiguration.CreatePlaylistSnapshotConfiguration(&ctx, &input, r.DB.DB)
+}
+
+// RequestConfirmationCode is the resolver for the requestConfirmationCode field.
+func (r *queryResolver) RequestConfirmationCode(ctx context.Context, email string) (*model.RequestConfirmationCodeResponse, error) {
+	return requestConfirmationCode.RequestConfirmationCode(ctx, email, r.EmailConfirmationCodes)
+}
+
+// ConfirmConfirmationCode is the resolver for the confirmConfirmationCode field.
+func (r *queryResolver) ConfirmConfirmationCode(ctx context.Context, confirmationCode string, confirmationSecret *string) (*model.User, error) {
+	return confirmConfirmationCode.ConfirmConfirmationCode(ctx, confirmationCode, *confirmationSecret, r.EmailConfirmationCodes, r.DB.DB)
 }
 
 // SyncEvents is the resolver for the syncEvents field.

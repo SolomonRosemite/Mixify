@@ -42,8 +42,20 @@ type PlaylistSnapshotConfiguration struct {
 	Playlists []*PlaylistSnapshot `json:"playlists"`
 }
 
+type RequestConfirmationCodeResponse struct {
+	ConfirmationSecret string `json:"confirmationSecret"`
+}
+
 type SyncPlaylistsEvent struct {
 	ID                    string                           `json:"id"`
 	UserID                string                           `json:"userId"`
 	ConfigurationSnapshot []*PlaylistSnapshotConfiguration `json:"configurationSnapshot"`
+}
+
+type User struct {
+	ID            string                `json:"id"`
+	Email         string                `json:"email"`
+	Username      string                `json:"username"`
+	SpotifyUserID string                `json:"spotifyUserId"`
+	SyncEvents    []*SyncPlaylistsEvent `json:"syncEvents"`
 }

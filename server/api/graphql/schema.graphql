@@ -23,7 +23,24 @@ type PlaylistAssociationSnapshot {
   parentPlaylistId: ID!
 }
 
+type RequestConfirmationCodeResponse {
+  confirmationSecret: String!
+}
+
+type User {
+  id: ID!
+  email: String!
+  username: String!
+  spotifyUserId: String!
+  syncEvents: [SyncPlaylistsEvent!]!
+}
+
 type Query {
+  requestConfirmationCode(email: String!): RequestConfirmationCodeResponse!
+  confirmConfirmationCode(
+    confirmationCode: String!
+    confirmationSecret: String
+  ): User!
   syncEvents(id: ID!): SyncPlaylistsEvent!
 }
 
