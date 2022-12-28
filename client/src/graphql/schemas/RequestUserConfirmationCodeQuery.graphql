@@ -1,0 +1,5 @@
+query RequestUserConfirmationCode($email: String!) {
+  requestConfirmationCode(email: $email) {
+    confirmationSecret
+  }
+}
