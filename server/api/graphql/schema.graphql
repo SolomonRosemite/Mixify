@@ -39,7 +39,7 @@ type Query {
   requestConfirmationCode(email: String!): RequestConfirmationCodeResponse!
   confirmConfirmationCode(
     confirmationCode: String!
-    confirmationSecret: String
+    confirmationSecret: String!
   ): User!
   syncEvents(id: ID!): SyncPlaylistsEvent!
 }
