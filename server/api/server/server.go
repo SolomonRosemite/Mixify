@@ -12,6 +12,8 @@ import (
 	"github.com/SolomonRosemite/Mixify/db"
 	"github.com/SolomonRosemite/Mixify/internal/models"
 	spotifyUtil "github.com/SolomonRosemite/Mixify/internal/utils/spotify"
+	"github.com/go-chi/chi"
+	"github.com/rs/cors"
 	"github.com/zmb3/spotify/v2"
 )
 
@@ -34,15 +36,23 @@ func StartServer(DB *db.DBWrapper) {
 
 	spotifyUserAccessResolver["user_id:1"] = user
 
+	router := chi.NewRouter()
+
+	router.Use(cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowCredentials: true,
+		Debug:            true,
+	}).Handler)
+
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graphql.Resolver{
 		DB: DB, SpotifyUserAccess: &spotifyUserAccessResolver, EmailConfirmationCodes: &map[string]*models.EmailConfirmation{}}}))
 
-	http.Handle("/playground", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", srv)
+	router.Handle("/playground", playground.Handler("GraphQL playground", "/query"))
+	router.Handle("/query", srv)
 
 	log.Printf("connect to http://localhost:%s/playground for GraphQL playground", port)
 
 	// When running in docker this might have to be 0.0.0.0:port or just :port instead of localhost:port
 	srvUrl := "localhost:" + port
-	log.Fatal(http.ListenAndServe(srvUrl, nil))
+	log.Fatal(http.ListenAndServe(srvUrl, router))
 }

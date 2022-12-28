@@ -5,7 +5,9 @@ go 1.19
 require (
 	github.com/99designs/gqlgen v0.17.20
 	github.com/dominikbraun/graph v0.14.0
+	github.com/go-chi/chi v1.5.4
 	github.com/joho/godotenv v1.4.0
+	github.com/rs/cors v1.8.2
 	github.com/vektah/gqlparser/v2 v2.5.1
 	github.com/zmb3/spotify/v2 v2.3.0
 	gorm.io/driver/postgres v1.4.5
