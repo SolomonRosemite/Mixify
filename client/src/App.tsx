@@ -2,10 +2,10 @@ import { Route, Routes } from "@solidjs/router";
 import type { Component } from "solid-js";
 import { createStore } from "solid-js/store";
 import { createClient, Provider } from "solid-urql";
+import DashboardPage from "./app/pages/DashboardPage";
 import EmailConfirmationPage from "./app/pages/EmailConfirmationPage";
 import LandingPage from "./app/pages/LandingPage";
 import NotFoundPage from "./app/pages/NotFoundPage";
-import PlaylistBuilderPage from "./app/pages/PlaylistBuilderPage";
 import { AppStore } from "./types/types";
 
 export const graphqlUrl = "http://localhost:5000/query";
@@ -22,10 +22,7 @@ const App: Component = () => {
           path="/confirmation/:id"
           element={<EmailConfirmationPage appStore={store} />}
         />
-        <Route
-          path="/dashboard"
-          element={<PlaylistBuilderPage appStore={store} />}
-        />
+        <Route path="/dashboard" element={<DashboardPage appStore={store} />} />
         <Route path="/*" element={<NotFoundPage />} />
       </Routes>
     </Provider>

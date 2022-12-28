@@ -1,6 +1,6 @@
 import { ComponentWithAppStore } from "../../types/types";
 
-const PlaylistBuilderPage: ComponentWithAppStore = ({ appStore }) => {
+const DashboardPage: ComponentWithAppStore = ({ appStore }) => {
   const [store] = appStore;
 
   return (
@@ -12,4 +12,4 @@ const PlaylistBuilderPage: ComponentWithAppStore = ({ appStore }) => {
   );
 };
 
-export default PlaylistBuilderPage;
+export default DashboardPage;
