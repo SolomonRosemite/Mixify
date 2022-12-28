@@ -1,6 +1,12 @@
 import type { Component } from "solid-js";
 
-const EmailConfirmationPage: Component = () => {
+interface EmailConfirmationPageProps {
+  confirmationSecretCode: string;
+}
+
+const EmailConfirmationPage: Component<EmailConfirmationPageProps> = ({
+  confirmationSecretCode,
+}) => {
   return (
     <div class="my-80">
       <div>

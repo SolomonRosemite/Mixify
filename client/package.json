@@ -6,10 +6,15 @@
     "start": "vite",
     "dev": "vite",
     "build": "vite build",
-    "serve": "vite preview"
+    "serve": "vite preview",
+    "codegen": "graphql-codegen --config gql/codegen.config.ts && yarn post:codegen",
+    "post:codegen": "tsc gql/post.codegen.ts && node gql/post.codegen.js && rm gql/post.codegen.js"
   },
   "license": "MIT",
   "devDependencies": {
+    "@graphql-codegen/cli": "2.16.1",
+    "@graphql-codegen/client-preset": "1.2.3",
+    "@graphql-codegen/typescript-urql": "^3.7.3",
     "autoprefixer": "^10.4.13",
     "postcss": "^8.4.20",
     "sass": "^1.57.1",
@@ -20,7 +25,11 @@
   },
   "dependencies": {
     "@tanstack/solid-query": "^4.20.4",
+    "@urql/core": "^3.1.1",
     "daisyui": "^2.46.0",
-    "solid-js": "^1.5.1"
+    "graphql": "^16.6.0",
+    "graphql-tag": "^2.12.6",
+    "solid-js": "^1.5.1",
+    "solid-urql": "^0.2.0"
   }
 }
