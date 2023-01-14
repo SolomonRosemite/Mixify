@@ -12,7 +12,9 @@ export const graphqlUrl = "http://localhost:5000/query";
 const client = createClient({ url: graphqlUrl });
 
 const App: Component = () => {
-  const store = createStore<AppStore>({});
+  const store = createStore<AppStore>({
+    playlistConfigurations: [],
+  });
 
   return (
     <Provider value={client}>

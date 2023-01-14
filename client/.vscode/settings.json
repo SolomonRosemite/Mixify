@@ -1,4 +1,11 @@
 {
-  "cSpell.words": ["Codegen", "daisyui", "Mixify", "tanstack", "urql"],
+  "cSpell.words": [
+    "Codegen",
+    "daisyui",
+    "Mixify",
+    "Mixstack",
+    "tanstack",
+    "urql"
+  ],
   "editor.indentSize": 2
 }
