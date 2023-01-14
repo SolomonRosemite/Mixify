@@ -1,17 +1,24 @@
-import { useNavigate, useParams } from "@solidjs/router";
+import { useLocation, useNavigate } from "@solidjs/router";
 import { createSignal } from "solid-js";
 import { produce } from "solid-js/store";
 import { graphqlUrl } from "../../App";
 import { useConfirmConfirmationCodeQuery } from "../../graphql/generated/graphql";
-import { ComponentWithAppStore } from "../../types/types";
+import {
+  ComponentWithAppStore,
+  EmailConfirmationNavState,
+} from "../../types/types";
+import { requestUserConfirmationCode } from "../../utils/gql/queries";
 import { toPromise } from "../../utils/gql/query-converter";
 
 const EmailConfirmationPage: ComponentWithAppStore = ({ appStore }) => {
+  const navProps = useLocation().state as EmailConfirmationNavState;
   const navigate = useNavigate();
-  const params = useParams();
+
   const [, setStore] = appStore;
 
-  const [confirmationSecret, setConfirmationSecret] = createSignal(params.id);
+  const [confirmationSecret, setConfirmationSecret] = createSignal(
+    navProps.secret
+  );
   const [confirmationCode, setConfirmationCode] = createSignal("");
 
   const handleConfirmationCodeChange = (e: Event) => {
@@ -19,8 +26,19 @@ const EmailConfirmationPage: ComponentWithAppStore = ({ appStore }) => {
     setConfirmationCode(target.value);
   };
 
+  const handleResendCodeClick = async () => {
+    const response = await requestUserConfirmationCode(navProps.email);
+
+    if (response.error) {
+      console.error(response.error);
+      return;
+    }
+
+    const secret = response.data!.requestConfirmationCode.confirmationSecret;
+    setConfirmationSecret(secret);
+  };
+
   const handleSignInClick = async () => {
-    console.log(confirmationSecret(), confirmationCode());
     const response = await confirmConfirmationCode(
       confirmationCode(),
       confirmationSecret()
@@ -72,7 +90,10 @@ const EmailConfirmationPage: ComponentWithAppStore = ({ appStore }) => {
               Sign in
             </button>
             <p>
-              Still never received any mail? <a class="link">Resent code.</a>
+              Still never received any mail?{" "}
+              <a class="link" onclick={handleResendCodeClick}>
+                Resent code.
+              </a>
             </p>
           </div>
           <div>

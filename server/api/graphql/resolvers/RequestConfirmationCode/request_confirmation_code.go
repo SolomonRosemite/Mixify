@@ -17,6 +17,19 @@ import (
 
 func RequestConfirmationCode(ctx context.Context, email string, codes *map[string]*models.EmailConfirmation) (*model.RequestConfirmationCodeResponse, error) {
 	email = strings.TrimSpace(email)
+
+	// If there is already a confirmation code for this email, return it
+	for _, confirmation := range *codes {
+		if *confirmation.Email == email {
+			go func() {
+				sendConfirmationCodeToEmail(email, *confirmation.Code)
+			}()
+			return &model.RequestConfirmationCodeResponse{
+				ConfirmationSecret: *confirmation.Code,
+			}, nil
+		}
+	}
+
 	random := rand.New(rand.NewSource(time.Now().UnixNano()))
 
 	var confirmationCode string = generateRandomString(random, 4)
@@ -35,6 +48,7 @@ func RequestConfirmationCode(ctx context.Context, email string, codes *map[strin
 	(*codes)[confirmationCode+confirmationSecret] = &models.EmailConfirmation{
 		Email:      &email,
 		Expiration: common.LiteralToPtr(time.Now().Add(time.Minute * 5)),
+		Code:       &confirmationCode,
 	}
 
 	go func() {
