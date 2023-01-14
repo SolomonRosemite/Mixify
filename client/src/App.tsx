@@ -19,7 +19,7 @@ const App: Component = () => {
       <Routes>
         <Route path="/" component={LandingPage} />
         <Route
-          path="/confirmation/:id"
+          path="/confirmation"
           element={<EmailConfirmationPage appStore={store} />}
         />
         <Route path="/dashboard" element={<DashboardPage appStore={store} />} />

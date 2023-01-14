@@ -8,6 +8,11 @@ export type AppStore = {
   };
 };
 
+export type EmailConfirmationNavState = {
+  email: string;
+  secret: string;
+};
+
 export type ComponentWithProps<T> = Component<{
   props: T;
 }>;

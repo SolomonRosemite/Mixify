@@ -1,8 +1,6 @@
 import { useNavigate } from "@solidjs/router";
 import { Component, createSignal } from "solid-js";
-import { graphqlUrl } from "../../App";
-import { useRequestUserConfirmationCodeQuery } from "../../graphql/generated/graphql";
-import { toPromise } from "../../utils/gql/query-converter";
+import { requestUserConfirmationCode } from "../../utils/gql/queries";
 
 const LandingPage: Component = () => {
   const navigate = useNavigate();
@@ -17,12 +15,21 @@ const LandingPage: Component = () => {
     }
 
     const secret = response.data!.requestConfirmationCode.confirmationSecret;
-    navigate(`/confirmation/${secret}`);
+    const state = { email: email(), secret };
+    navigate(`/confirmation`, {
+      state,
+    });
   };
 
   const handleEmailChange = (e: Event) => {
     const target = e.target as HTMLInputElement;
     setEmail(target.value);
+  };
+
+  const handleKeyPressEnter = (e: KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleSignInClick();
+    }
   };
 
   return (
@@ -39,6 +46,8 @@ const LandingPage: Component = () => {
                 class="input input-bordered w-full max-w-xs"
                 placeholder="example@mail.com"
                 type="text"
+                onsubmit={() => console.log("submit")}
+                onKeyPress={handleKeyPressEnter}
                 onInput={handleEmailChange}
               />
             </div>
@@ -50,18 +59,6 @@ const LandingPage: Component = () => {
       </div>
     </div>
   );
-};
-
-const requestUserConfirmationCode = (email: string) => {
-  const [, state] = useRequestUserConfirmationCodeQuery({
-    context: {
-      // When refetching a query the provided solid urql client can not be found for some reason.
-      // This is why we have to provide the url manually.
-      url: graphqlUrl,
-    },
-    variables: { email },
-  });
-  return toPromise(state);
 };
 
 export default LandingPage;
