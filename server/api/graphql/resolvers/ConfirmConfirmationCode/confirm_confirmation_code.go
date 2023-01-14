@@ -39,8 +39,12 @@ func createOrGetUser(email string, db *gorm.DB) (*model.User, error) {
 		Email: &email,
 	}).Error
 
+	if err != nil {
+		return nil, err
+	}
+
 	return &model.User{
 		ID:    fmt.Sprint(user.ID),
 		Email: *user.Email,
-	}, err
+	}, nil
 }
