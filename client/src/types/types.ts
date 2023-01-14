@@ -6,6 +6,7 @@ export type AppStore = {
     id: string;
     email: string;
   };
+  playlistConfigurations: PlaylistConfiguration[];
 };
 
 export type EmailConfirmationNavState = {
@@ -19,3 +20,8 @@ export type ComponentWithProps<T> = Component<{
 export type ComponentWithAppStore = Component<{
   appStore: [AppStore, SetStoreFunction<AppStore>];
 }>;
+
+export type PlaylistConfiguration = {
+  id: string;
+  name: string;
+};
