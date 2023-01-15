@@ -14,7 +14,11 @@ const PlaylistsConfigurationPanel: ComponentWithAppStore = ({ appStore }) => {
     setStore({
       playlistConfigurations: [
         ...store.playlistConfigurations,
-        { id: "1", name: "Base Playlist" },
+        {
+          id: "test1",
+          name: "New Playlist",
+          associations: [],
+        },
       ],
     });
   };

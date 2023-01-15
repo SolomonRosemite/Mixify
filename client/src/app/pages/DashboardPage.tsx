@@ -16,7 +16,7 @@ const DashboardPage: ComponentWithAppStore = ({ appStore }) => {
         <section class="basis-1/6">
           <PlaylistsConfigurationPanel appStore={appStore} />
         </section>
-        <div class="basis-4/6">
+        <div class="basis-4/6 w-4/6">
           <PlaylistGraphOverview appStore={appStore} />
         </div>
         <section class="basis-1/6">
