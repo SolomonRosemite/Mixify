@@ -14,6 +14,7 @@
   "devDependencies": {
     "@graphql-codegen/cli": "2.16.1",
     "@graphql-codegen/typescript-urql": "^3.7.3",
+    "@types/spotify-web-api-node": "^5.0.7",
     "autoprefixer": "^10.4.13",
     "postcss": "^8.4.20",
     "sass": "^1.57.1",
@@ -29,6 +30,7 @@
     "daisyui": "^2.46.0",
     "graphql": "^16.6.0",
     "solid-js": "^1.5.1",
-    "solid-urql": "^0.2.0"
+    "solid-urql": "^0.2.0",
+    "spotify-web-api-node": "^5.0.2"
   }
 }

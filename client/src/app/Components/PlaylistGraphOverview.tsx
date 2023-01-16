@@ -3,8 +3,10 @@ import {
   ComponentWithAppStore,
   PlaylistConfiguration,
 } from "../../types/types";
+import { sleep } from "../../utils/common";
+import { doMagic } from "../../utils/html/dangerous-html-helpers";
+import PlaylistCard from "./PlaylistCard";
 
-// https://www.reddit.com/r/css/comments/ltbxs5/comment/goycxzf/?utm_source=share&utm_medium=web2x&context=3
 const PlaylistGraphOverview: ComponentWithAppStore = ({ appStore }) => {
   const [playlistLayers, setPlaylistLayers] = createSignal<PlaylistLayer[]>([]);
   const [store] = appStore;
@@ -31,8 +33,19 @@ const PlaylistGraphOverview: ComponentWithAppStore = ({ appStore }) => {
         playlists,
       })
     );
+
     translatedLayers.splice(0, 1);
     setPlaylistLayers(translatedLayers);
+
+    sleep(4000).then(() => {
+      store.playlistConfigurations
+        .flatMap((p) => p.associations)
+        .forEach((a) => {
+          if (a.parent) {
+            doMagic(a.parent.id, a.child!.id);
+          }
+        });
+    });
   });
 
   return (
@@ -40,10 +53,11 @@ const PlaylistGraphOverview: ComponentWithAppStore = ({ appStore }) => {
       <For each={playlistLayers()} fallback={<div>No items</div>}>
         {(layer, layerIndex) => (
           <div class="flex justify-evenly" data-index={layerIndex()}>
-            {" "}
             <For each={layer.playlists} fallback={<div>No items</div>}>
               {(playlist, index) => (
-                <div data-index={layerIndex() + index()}>{playlist.name}</div>
+                <div id={playlist.id} data-index={layerIndex() + index()}>
+                  <PlaylistCard props={playlist} />
+                </div>
               )}
             </For>
           </div>

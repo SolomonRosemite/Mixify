@@ -1,4 +1,5 @@
 import { CombinedError, CreateQueryState } from "solid-urql";
+import { sleep } from "../common";
 
 type QueryResponse<T> = {
   error?: CombinedError;
@@ -15,8 +16,4 @@ export function toPromise<T>(state: () => CreateQueryState<T>) {
 
     return resolve(state());
   });
-}
-
-function sleep(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
 }

@@ -24,6 +24,7 @@ export type ComponentWithAppStore = Component<{
 export type PlaylistConfiguration = {
   id: string;
   name: string;
+  spotifyPlaylistId?: string | null;
   associations: PlaylistAssociation[];
 };
 

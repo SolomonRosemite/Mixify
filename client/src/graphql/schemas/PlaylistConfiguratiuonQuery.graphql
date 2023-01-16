@@ -1,0 +1,16 @@
+query Configurations($id: ID!) {
+  configurations(id: $id) {
+    id
+    playlists {
+      id
+      name
+      spotifyPlaylistId
+      playlistOrder
+      associations {
+        id
+        childPlaylistId
+        parentPlaylistId
+      }
+    }
+  }
+}
