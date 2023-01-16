@@ -4,7 +4,7 @@ import {
   PlaylistConfiguration,
 } from "../../types/types";
 import { sleep } from "../../utils/common";
-import { doMagic } from "../../utils/html/dangerous-html-helpers";
+import { drawLineBetweenElements as drawLineBetweenElementsUnsafe } from "../../utils/html/dangerous-html-helpers";
 import PlaylistCard from "./PlaylistCard";
 
 const PlaylistGraphOverview: ComponentWithAppStore = ({ appStore }) => {
@@ -37,12 +37,14 @@ const PlaylistGraphOverview: ComponentWithAppStore = ({ appStore }) => {
     translatedLayers.splice(0, 1);
     setPlaylistLayers(translatedLayers);
 
+    // TODO: We should probably replace this with something more better
+    // This is a hacky to make sure the PlaylistCards are rendered and ready before we start drawing
     sleep(4000).then(() => {
       store.playlistConfigurations
         .flatMap((p) => p.associations)
         .forEach((a) => {
           if (a.parent) {
-            doMagic(a.parent.id, a.child!.id);
+            drawLineBetweenElementsUnsafe(a.parent.id, a.child!.id);
           }
         });
     });

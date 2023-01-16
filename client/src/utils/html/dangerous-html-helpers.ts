@@ -1,4 +1,9 @@
-export const doMagic = (elementId1: string, elementId2: string) => {
+// This method creates a line between two elements. By doing so it seems to manipulate the DOM in a way that solid js
+// does not except. This can lead to unexpected behavior.
+export const drawLineBetweenElements = (
+  elementId1: string,
+  elementId2: string
+) => {
   var div1 = document.getElementById(elementId1);
   var div2 = document.getElementById(elementId2);
 
