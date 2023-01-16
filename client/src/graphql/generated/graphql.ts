@@ -78,15 +78,22 @@ export type PlaylistSnapshotConfiguration = {
 
 export type Query = {
   __typename?: 'Query';
+  configurations: PlaylistSnapshotConfiguration;
   confirmConfirmationCode: User;
+  requestAccessToken: RequestAccessTokenResponse;
   requestConfirmationCode: RequestConfirmationCodeResponse;
   syncEvents: SyncPlaylistsEvent;
 };
 
 
+export type QueryConfigurationsArgs = {
+  id: Scalars['ID'];
+};
+
+
 export type QueryConfirmConfirmationCodeArgs = {
   confirmationCode: Scalars['String'];
-  confirmationSecret?: InputMaybe<Scalars['String']>;
+  confirmationSecret: Scalars['String'];
 };
 
 
@@ -99,6 +106,12 @@ export type QuerySyncEventsArgs = {
   id: Scalars['ID'];
 };
 
+export type RequestAccessTokenResponse = {
+  __typename?: 'RequestAccessTokenResponse';
+  accessToken: Scalars['String'];
+  expiresIn: Scalars['String'];
+};
+
 export type RequestConfirmationCodeResponse = {
   __typename?: 'RequestConfirmationCodeResponse';
   confirmationSecret: Scalars['String'];
@@ -106,7 +119,7 @@ export type RequestConfirmationCodeResponse = {
 
 export type SyncPlaylistsEvent = {
   __typename?: 'SyncPlaylistsEvent';
-  configurationSnapshot: Array<Maybe<PlaylistSnapshotConfiguration>>;
+  configurationSnapshot: Array<PlaylistSnapshotConfiguration>;
   id: Scalars['ID'];
   userId: Scalars['ID'];
 };
@@ -128,12 +141,26 @@ export type ConfirmConfirmationCodeQueryVariables = Exact<{
 
 export type ConfirmConfirmationCodeQuery = { __typename?: 'Query', confirmConfirmationCode: { __typename?: 'User', email: string, id: string } };
 
+export type ConfigurationsQueryVariables = Exact<{
+  id: Scalars['ID'];
+}>;
+
+
+export type ConfigurationsQuery = { __typename?: 'Query', configurations: { __typename?: 'PlaylistSnapshotConfiguration', id: string, playlists: Array<{ __typename?: 'PlaylistSnapshot', id: string, name: string, spotifyPlaylistId?: string | null, playlistOrder: Array<number | null>, associations: Array<{ __typename?: 'PlaylistAssociationSnapshot', id: string, childPlaylistId: string, parentPlaylistId: string }> }> } };
+
+export type RequestAccessTokenQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type RequestAccessTokenQuery = { __typename?: 'Query', requestAccessToken: { __typename?: 'RequestAccessTokenResponse', accessToken: string, expiresIn: string } };
+
 export type RequestUserConfirmationCodeQueryVariables = Exact<{
   email: Scalars['String'];
 }>;
 
 
 export type RequestUserConfirmationCodeQuery = { __typename?: 'Query', requestConfirmationCode: { __typename?: 'RequestConfirmationCodeResponse', confirmationSecret: string } };
+
+
 
 
 
@@ -150,6 +177,40 @@ export const ConfirmConfirmationCodeDocument = gql`
 
 export function useConfirmConfirmationCodeQuery(options: Omit<Urql.CreateQueryArgs<ConfirmConfirmationCodeQueryVariables>, 'query'>) {
   return Urql.createQuery<ConfirmConfirmationCodeQuery, ConfirmConfirmationCodeQueryVariables>({ query: ConfirmConfirmationCodeDocument, ...options });
+};
+export const ConfigurationsDocument = gql`
+    query Configurations($id: ID!) {
+  configurations(id: $id) {
+    id
+    playlists {
+      id
+      name
+      spotifyPlaylistId
+      playlistOrder
+      associations {
+        id
+        childPlaylistId
+        parentPlaylistId
+      }
+    }
+  }
+}
+    `;
+
+export function useConfigurationsQuery(options: Omit<Urql.CreateQueryArgs<ConfigurationsQueryVariables>, 'query'>) {
+  return Urql.createQuery<ConfigurationsQuery, ConfigurationsQueryVariables>({ query: ConfigurationsDocument, ...options });
+};
+export const RequestAccessTokenDocument = gql`
+    query RequestAccessToken {
+  requestAccessToken {
+    accessToken
+    expiresIn
+  }
+}
+    `;
+
+export function useRequestAccessTokenQuery(options?: Omit<Urql.CreateQueryArgs<RequestAccessTokenQueryVariables>, 'query'>) {
+  return Urql.createQuery<RequestAccessTokenQuery, RequestAccessTokenQueryVariables>({ query: RequestAccessTokenDocument, ...options });
 };
 export const RequestUserConfirmationCodeDocument = gql`
     query RequestUserConfirmationCode($email: String!) {
