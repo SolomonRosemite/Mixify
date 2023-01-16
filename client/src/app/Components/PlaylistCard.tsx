@@ -10,22 +10,12 @@ const PlaylistCard: ComponentWithProps<PlaylistConfiguration> = ({ props }) => {
 
   const spotifyApi = new SpotifyWebApi();
 
-  const [state] = createResource(accessToken, async (token: string) => {
+  const [state] = createResource(accessToken, async () => {
     if (!spotifyPlaylistId) {
       return undefined;
     }
 
-    const res = await spotifyApi.getPlaylist(spotifyPlaylistId);
-
-    // sleep(2000).then(() => {
-    //   associations.forEach((a) => {
-    //     if (a.parent) {
-    //       doMagic(a.parent.id, a.child!.id);
-    //     }
-    //   });
-    // });
-
-    return res;
+    return await spotifyApi.getPlaylist(spotifyPlaylistId);
   });
 
   createResource(async () => {

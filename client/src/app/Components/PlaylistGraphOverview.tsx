@@ -9,6 +9,8 @@ import PlaylistCard from "./PlaylistCard";
 
 const PlaylistGraphOverview: ComponentWithAppStore = ({ appStore }) => {
   const [playlistLayers, setPlaylistLayers] = createSignal<PlaylistLayer[]>([]);
+  const [configurationChangesExist, setConfigurationChangesExist] =
+    createSignal(false);
   const [store] = appStore;
 
   createEffect(() => {
@@ -48,23 +50,39 @@ const PlaylistGraphOverview: ComponentWithAppStore = ({ appStore }) => {
           }
         });
     });
+
+    sleep(1000 * 10).then(() => setConfigurationChangesExist(true));
   });
 
   return (
-    <div class="h-screen overflow-x-auto overflow-y-auto flex flex-col justify-evenly">
-      <For each={playlistLayers()} fallback={<div>No items</div>}>
-        {(layer, layerIndex) => (
-          <div class="flex justify-evenly" data-index={layerIndex()}>
-            <For each={layer.playlists} fallback={<div>No items</div>}>
-              {(playlist, index) => (
-                <div id={playlist.id} data-index={layerIndex() + index()}>
-                  <PlaylistCard props={playlist} />
-                </div>
-              )}
-            </For>
-          </div>
-        )}
-      </For>
+    <div>
+      <div class="h-[90vh] overflow-x-auto overflow-y-auto flex flex-col justify-evenly">
+        <For each={playlistLayers()} fallback={<div>No items</div>}>
+          {(layer, layerIndex) => (
+            <div class="flex justify-evenly" data-index={layerIndex()}>
+              <For each={layer.playlists} fallback={<div>No items</div>}>
+                {(playlist, index) => (
+                  <div id={playlist.id} data-index={layerIndex() + index()}>
+                    <PlaylistCard props={playlist} />
+                  </div>
+                )}
+              </For>
+            </div>
+          )}
+        </For>
+      </div>
+      <div class="">
+        <div class="float-right mx-7 my-16">
+          <button
+            class={
+              "btn btn-success" +
+              (!configurationChangesExist() ? " btn-disabled" : "")
+            }
+          >
+            Save changes
+          </button>
+        </div>
+      </div>
     </div>
   );
 };
