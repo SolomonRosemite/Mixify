@@ -39,7 +39,7 @@ func StartServer(DB *db.DBWrapper) {
 	router := chi.NewRouter()
 
 	router.Use(cors.New(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowedOrigins:   []string{"http://localhost:3000", "http://127.0.0.1:3000"},
 		AllowCredentials: true,
 		Debug:            true,
 	}).Handler)
