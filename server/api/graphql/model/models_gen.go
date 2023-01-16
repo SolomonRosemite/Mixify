@@ -42,6 +42,11 @@ type PlaylistSnapshotConfiguration struct {
 	Playlists []*PlaylistSnapshot `json:"playlists"`
 }
 
+type RequestAccessTokenResponse struct {
+	AccessToken string `json:"accessToken"`
+	ExpiresIn   string `json:"expiresIn"`
+}
+
 type RequestConfirmationCodeResponse struct {
 	ConfirmationSecret string `json:"confirmationSecret"`
 }

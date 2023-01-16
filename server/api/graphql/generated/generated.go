@@ -69,9 +69,16 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		ConfirmConfirmationCode func(childComplexity int, confirmationCode string, confirmationSecret *string) int
+		Configurations          func(childComplexity int, id string) int
+		ConfirmConfirmationCode func(childComplexity int, confirmationCode string, confirmationSecret string) int
+		RequestAccessToken      func(childComplexity int) int
 		RequestConfirmationCode func(childComplexity int, email string) int
 		SyncEvents              func(childComplexity int, id string) int
+	}
+
+	RequestAccessTokenResponse struct {
+		AccessToken func(childComplexity int) int
+		ExpiresIn   func(childComplexity int) int
 	}
 
 	RequestConfirmationCodeResponse struct {
@@ -98,9 +105,11 @@ type MutationResolver interface {
 	CreatePlaylistSnapshotConfiguration(ctx context.Context, input model.NewPlaylistSnapshotConfiguration) (*model.PlaylistSnapshotConfiguration, error)
 }
 type QueryResolver interface {
+	RequestAccessToken(ctx context.Context) (*model.RequestAccessTokenResponse, error)
 	RequestConfirmationCode(ctx context.Context, email string) (*model.RequestConfirmationCodeResponse, error)
-	ConfirmConfirmationCode(ctx context.Context, confirmationCode string, confirmationSecret *string) (*model.User, error)
+	ConfirmConfirmationCode(ctx context.Context, confirmationCode string, confirmationSecret string) (*model.User, error)
 	SyncEvents(ctx context.Context, id string) (*model.SyncPlaylistsEvent, error)
+	Configurations(ctx context.Context, id string) (*model.PlaylistSnapshotConfiguration, error)
 }
 
 type executableSchema struct {
@@ -212,6 +221,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PlaylistSnapshotConfiguration.Playlists(childComplexity), true
 
+	case "Query.configurations":
+		if e.complexity.Query.Configurations == nil {
+			break
+		}
+
+		args, err := ec.field_Query_configurations_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Configurations(childComplexity, args["id"].(string)), true
+
 	case "Query.confirmConfirmationCode":
 		if e.complexity.Query.ConfirmConfirmationCode == nil {
 			break
@@ -222,7 +243,14 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.ConfirmConfirmationCode(childComplexity, args["confirmationCode"].(string), args["confirmationSecret"].(*string)), true
+		return e.complexity.Query.ConfirmConfirmationCode(childComplexity, args["confirmationCode"].(string), args["confirmationSecret"].(string)), true
+
+	case "Query.requestAccessToken":
+		if e.complexity.Query.RequestAccessToken == nil {
+			break
+		}
+
+		return e.complexity.Query.RequestAccessToken(childComplexity), true
 
 	case "Query.requestConfirmationCode":
 		if e.complexity.Query.RequestConfirmationCode == nil {
@@ -247,6 +275,20 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.SyncEvents(childComplexity, args["id"].(string)), true
+
+	case "RequestAccessTokenResponse.accessToken":
+		if e.complexity.RequestAccessTokenResponse.AccessToken == nil {
+			break
+		}
+
+		return e.complexity.RequestAccessTokenResponse.AccessToken(childComplexity), true
+
+	case "RequestAccessTokenResponse.expiresIn":
+		if e.complexity.RequestAccessTokenResponse.ExpiresIn == nil {
+			break
+		}
+
+		return e.complexity.RequestAccessTokenResponse.ExpiresIn(childComplexity), true
 
 	case "RequestConfirmationCodeResponse.confirmationSecret":
 		if e.complexity.RequestConfirmationCodeResponse.ConfirmationSecret == nil {
@@ -386,7 +428,7 @@ var sources = []*ast.Source{
 	{Name: "../schema.graphql", Input: `type SyncPlaylistsEvent {
   id: ID!
   userId: ID!
-  configurationSnapshot: [PlaylistSnapshotConfiguration]!
+  configurationSnapshot: [PlaylistSnapshotConfiguration!]!
 }
 
 type PlaylistSnapshotConfiguration {
@@ -412,6 +454,11 @@ type RequestConfirmationCodeResponse {
   confirmationSecret: String!
 }
 
+type RequestAccessTokenResponse {
+  accessToken: String!
+  expiresIn: String!
+}
+
 type User {
   id: ID!
   email: String!
@@ -421,12 +468,14 @@ type User {
 }
 
 type Query {
+  requestAccessToken: RequestAccessTokenResponse!
   requestConfirmationCode(email: String!): RequestConfirmationCodeResponse!
   confirmConfirmationCode(
     confirmationCode: String!
-    confirmationSecret: String
+    confirmationSecret: String!
   ): User!
   syncEvents(id: ID!): SyncPlaylistsEvent!
+  configurations(id: ID!): PlaylistSnapshotConfiguration!
 }
 
 input NewSyncPlaylistsEvent {
@@ -509,6 +558,21 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_configurations_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNID2string(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["id"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_confirmConfirmationCode_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -521,10 +585,10 @@ func (ec *executionContext) field_Query_confirmConfirmationCode_args(ctx context
 		}
 	}
 	args["confirmationCode"] = arg0
-	var arg1 *string
+	var arg1 string
 	if tmp, ok := rawArgs["confirmationSecret"]; ok {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("confirmationSecret"))
-		arg1, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
+		arg1, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -1182,6 +1246,56 @@ func (ec *executionContext) fieldContext_PlaylistSnapshotConfiguration_playlists
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_requestAccessToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_requestAccessToken(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().RequestAccessToken(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.RequestAccessTokenResponse)
+	fc.Result = res
+	return ec.marshalNRequestAccessTokenResponse2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐRequestAccessTokenResponse(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_requestAccessToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "accessToken":
+				return ec.fieldContext_RequestAccessTokenResponse_accessToken(ctx, field)
+			case "expiresIn":
+				return ec.fieldContext_RequestAccessTokenResponse_expiresIn(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type RequestAccessTokenResponse", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query_requestConfirmationCode(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query_requestConfirmationCode(ctx, field)
 	if err != nil {
@@ -1255,7 +1369,7 @@ func (ec *executionContext) _Query_confirmConfirmationCode(ctx context.Context, 
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().ConfirmConfirmationCode(rctx, fc.Args["confirmationCode"].(string), fc.Args["confirmationSecret"].(*string))
+		return ec.resolvers.Query().ConfirmConfirmationCode(rctx, fc.Args["confirmationCode"].(string), fc.Args["confirmationSecret"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -1365,6 +1479,67 @@ func (ec *executionContext) fieldContext_Query_syncEvents(ctx context.Context, f
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_syncEvents_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_configurations(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_configurations(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Configurations(rctx, fc.Args["id"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.PlaylistSnapshotConfiguration)
+	fc.Result = res
+	return ec.marshalNPlaylistSnapshotConfiguration2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_configurations(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_PlaylistSnapshotConfiguration_id(ctx, field)
+			case "playlists":
+				return ec.fieldContext_PlaylistSnapshotConfiguration_playlists(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PlaylistSnapshotConfiguration", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_configurations_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return
 	}
@@ -1495,6 +1670,94 @@ func (ec *executionContext) fieldContext_Query___schema(ctx context.Context, fie
 				return ec.fieldContext___Schema_directives(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type __Schema", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RequestAccessTokenResponse_accessToken(ctx context.Context, field graphql.CollectedField, obj *model.RequestAccessTokenResponse) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_RequestAccessTokenResponse_accessToken(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.AccessToken, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_RequestAccessTokenResponse_accessToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RequestAccessTokenResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _RequestAccessTokenResponse_expiresIn(ctx context.Context, field graphql.CollectedField, obj *model.RequestAccessTokenResponse) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_RequestAccessTokenResponse_expiresIn(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ExpiresIn, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_RequestAccessTokenResponse_expiresIn(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RequestAccessTokenResponse",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -1660,7 +1923,7 @@ func (ec *executionContext) _SyncPlaylistsEvent_configurationSnapshot(ctx contex
 	}
 	res := resTmp.([]*model.PlaylistSnapshotConfiguration)
 	fc.Result = res
-	return ec.marshalNPlaylistSnapshotConfiguration2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx, field.Selections, res)
+	return ec.marshalNPlaylistSnapshotConfiguration2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfigurationᚄ(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_SyncPlaylistsEvent_configurationSnapshot(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4040,6 +4303,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Query")
+		case "requestAccessToken":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_requestAccessToken(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
 		case "requestConfirmationCode":
 			field := field
 
@@ -4109,6 +4395,29 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			out.Concurrently(i, func() graphql.Marshaler {
 				return rrm(innerCtx)
 			})
+		case "configurations":
+			field := field
+
+			innerFunc := func(ctx context.Context) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_configurations(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx, innerFunc)
+			}
+
+			out.Concurrently(i, func() graphql.Marshaler {
+				return rrm(innerCtx)
+			})
 		case "__type":
 
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
@@ -4121,6 +4430,41 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 				return ec._Query___schema(ctx, field)
 			})
 
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch()
+	if invalids > 0 {
+		return graphql.Null
+	}
+	return out
+}
+
+var requestAccessTokenResponseImplementors = []string{"RequestAccessTokenResponse"}
+
+func (ec *executionContext) _RequestAccessTokenResponse(ctx context.Context, sel ast.SelectionSet, obj *model.RequestAccessTokenResponse) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, requestAccessTokenResponseImplementors)
+	out := graphql.NewFieldSet(fields)
+	var invalids uint32
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("RequestAccessTokenResponse")
+		case "accessToken":
+
+			out.Values[i] = ec._RequestAccessTokenResponse_accessToken(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
+		case "expiresIn":
+
+			out.Values[i] = ec._RequestAccessTokenResponse_expiresIn(ctx, field, obj)
+
+			if out.Values[i] == graphql.Null {
+				invalids++
+			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -4798,7 +5142,7 @@ func (ec *executionContext) marshalNPlaylistSnapshotConfiguration2githubᚗcom�
 	return ec._PlaylistSnapshotConfiguration(ctx, sel, &v)
 }
 
-func (ec *executionContext) marshalNPlaylistSnapshotConfiguration2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx context.Context, sel ast.SelectionSet, v []*model.PlaylistSnapshotConfiguration) graphql.Marshaler {
+func (ec *executionContext) marshalNPlaylistSnapshotConfiguration2ᚕᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfigurationᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PlaylistSnapshotConfiguration) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
 	isLen1 := len(v) == 1
@@ -4822,7 +5166,7 @@ func (ec *executionContext) marshalNPlaylistSnapshotConfiguration2ᚕᚖgithub�
 			if !isLen1 {
 				defer wg.Done()
 			}
-			ret[i] = ec.marshalOPlaylistSnapshotConfiguration2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx, sel, v[i])
+			ret[i] = ec.marshalNPlaylistSnapshotConfiguration2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx, sel, v[i])
 		}
 		if isLen1 {
 			f(i)
@@ -4832,6 +5176,12 @@ func (ec *executionContext) marshalNPlaylistSnapshotConfiguration2ᚕᚖgithub�
 
 	}
 	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
 
 	return ret
 }
@@ -4844,6 +5194,20 @@ func (ec *executionContext) marshalNPlaylistSnapshotConfiguration2ᚖgithubᚗco
 		return graphql.Null
 	}
 	return ec._PlaylistSnapshotConfiguration(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNRequestAccessTokenResponse2githubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐRequestAccessTokenResponse(ctx context.Context, sel ast.SelectionSet, v model.RequestAccessTokenResponse) graphql.Marshaler {
+	return ec._RequestAccessTokenResponse(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNRequestAccessTokenResponse2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐRequestAccessTokenResponse(ctx context.Context, sel ast.SelectionSet, v *model.RequestAccessTokenResponse) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._RequestAccessTokenResponse(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalNRequestConfirmationCodeResponse2githubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐRequestConfirmationCodeResponse(ctx context.Context, sel ast.SelectionSet, v model.RequestConfirmationCodeResponse) graphql.Marshaler {
@@ -5240,13 +5604,6 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	}
 	res := graphql.MarshalInt(*v)
 	return res
-}
-
-func (ec *executionContext) marshalOPlaylistSnapshotConfiguration2ᚖgithubᚗcomᚋSolomonRosemiteᚋMixifyᚋapiᚋgraphqlᚋmodelᚐPlaylistSnapshotConfiguration(ctx context.Context, sel ast.SelectionSet, v *model.PlaylistSnapshotConfiguration) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._PlaylistSnapshotConfiguration(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {

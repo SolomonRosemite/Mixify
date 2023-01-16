@@ -1,7 +1,7 @@
 type SyncPlaylistsEvent {
   id: ID!
   userId: ID!
-  configurationSnapshot: [PlaylistSnapshotConfiguration]!
+  configurationSnapshot: [PlaylistSnapshotConfiguration!]!
 }
 
 type PlaylistSnapshotConfiguration {
@@ -27,6 +27,11 @@ type RequestConfirmationCodeResponse {
   confirmationSecret: String!
 }
 
+type RequestAccessTokenResponse {
+  accessToken: String!
+  expiresIn: String!
+}
+
 type User {
   id: ID!
   email: String!
@@ -36,12 +41,14 @@ type User {
 }
 
 type Query {
+  requestAccessToken: RequestAccessTokenResponse!
   requestConfirmationCode(email: String!): RequestConfirmationCodeResponse!
   confirmConfirmationCode(
     confirmationCode: String!
     confirmationSecret: String!
   ): User!
   syncEvents(id: ID!): SyncPlaylistsEvent!
+  configurations(id: ID!): PlaylistSnapshotConfiguration!
 }
 
 input NewSyncPlaylistsEvent {
