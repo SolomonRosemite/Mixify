@@ -4,15 +4,18 @@ export const drawLineBetweenElements = (
   elementId1: string,
   elementId2: string
 ) => {
-  var div1 = document.getElementById(elementId1);
-  var div2 = document.getElementById(elementId2);
+  // TODO: Find alternative to this method.
+  // Turns out hot reloading does not like this method. Disable it for now.
+  return;
+  // var div1 = document.getElementById(elementId1);
+  // var div2 = document.getElementById(elementId2);
 
-  if (!div1 || !div2) {
-    console.log("No divs found");
-    return;
-  }
+  // if (!div1 || !div2) {
+  //   console.log("No divs found");
+  //   return;
+  // }
 
-  connect(div1, div2, "#FFF", 1);
+  // connect(div1, div2, "#FFF", 1);
 };
 
 function connect(

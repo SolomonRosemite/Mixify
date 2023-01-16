@@ -10,6 +10,8 @@ const context: Partial<OperationContext> = {
   // When refetching a query the provided solid urql client can not be found for some reason.
   // This is why we have to provide the url manually.
   url: "http://localhost:5000/query",
+  // https://formidable.com/open-source/urql/docs/basics/document-caching/
+  requestPolicy: "cache-and-network",
 };
 
 export const requestAccessTokenQuery = () => {
@@ -29,12 +31,7 @@ export const usePlaylistConfigurationQuery = (id: string) => {
 
 export const requestUserConfirmationCode = (email: string) => {
   const [, state] = useRequestUserConfirmationCodeQuery({
-    context: {
-      ...context,
-      // This query is used to request and resent the confirmation code as the user wishes.
-      // By preventing the query from being cached another request will be made to the server.
-      requestPolicy: "network-only",
-    },
+    context,
     variables: { email },
   });
   return toPromise(state);
