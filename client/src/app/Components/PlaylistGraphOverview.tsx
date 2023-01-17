@@ -71,8 +71,26 @@ const PlaylistGraphOverview: ComponentWithAppStore = ({ appStore }) => {
           )}
         </For>
       </div>
-      <div class="">
-        <div class="float-right mx-7 my-16">
+      <div class="flex justify-between">
+        <div class="mx-7 mt-16">
+          <button class="btn gap-2">
+            <img
+              class="w-10"
+              src="/src/assets/images/add-outline.svg"
+              alt="add icon"
+            />
+            Add base playlist
+          </button>
+          <button class="btn ml-7">
+            <img
+              class="w-10"
+              src="/src/assets/images/add-outline.svg"
+              alt="add icon"
+            />
+            Add mixstack
+          </button>
+        </div>
+        <div class="mx-7 mt-16">
           <button
             class={
               "btn btn-success" +
