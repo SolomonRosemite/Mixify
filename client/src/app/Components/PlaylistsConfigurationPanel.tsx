@@ -10,17 +10,6 @@ const PlaylistsConfigurationPanel: ComponentWithAppStore = ({ appStore }) => {
 
   const handleAddBasePlaylistClick = () => {
     console.log("Add base playlist");
-
-    setStore({
-      playlistConfigurations: [
-        ...store.playlistConfigurations,
-        {
-          id: "test1",
-          name: "New Playlist",
-          associations: [],
-        },
-      ],
-    });
   };
 
   return (
