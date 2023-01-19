@@ -1,4 +1,4 @@
-import { createResource, createSignal, Show } from "solid-js";
+import { createResource, createSignal, Match, Show, Switch } from "solid-js";
 import { createStore } from "solid-js/store";
 import SpotifyWebApi from "spotify-web-api-node";
 import { ComponentWithProps, PlaylistConfiguration } from "../../types/types";
@@ -58,7 +58,6 @@ const PlaylistCard: ComponentWithProps<PlaylistConfiguration> = ({ props }) => {
 
     spotifyApi.setAccessToken(accessToken);
     setAccessToken(accessToken);
-    console.log(cardOpened());
   });
 
   const handleShowPlaylistDetailsClick = () => {
@@ -79,29 +78,51 @@ const PlaylistCard: ComponentWithProps<PlaylistConfiguration> = ({ props }) => {
 
   return (
     <div>
-      <Show when={playlist()} fallback={<div>loading or error</div>}>
-        <PlaylistCardContentPart
-          playlistDescription={playlist()!.body.description ?? undefined}
-          playlistImageUrl={playlist()!.body.images[0].url}
-          playlistName={name}
-          playlistOwner={{
-            displayName: playlist()!.body.owner.display_name!,
-            uri: playlist()!.body.owner.uri,
-          }}
-          playlistNameInfoStore={[
-            playlistNameInfoStore,
-            setPlaylistNameInfoStore,
-          ]}
-          playlistDescriptionInfoStore={[
-            playlistDescriptionInfoStore,
-            setPlaylistDescriptionInfoStore,
-          ]}
-          playlistChangesExist={playlistChangesExist}
-          cardOpened={cardOpened}
-          handleCancelClick={handleCancelClick}
-          handleShowPlaylistDetailsClick={handleShowPlaylistDetailsClick}
-        />
-      </Show>
+      <Switch>
+        <Match when={spotifyPlaylistId}>
+          <Show when={playlist()} fallback={<div>loading or error</div>}>
+            <PlaylistCardContentPart
+              playlistDescription={playlist()!.body.description ?? undefined}
+              playlistImageUrl={playlist()!.body.images[0].url}
+              playlistName={name}
+              playlistOwner={{
+                displayName: playlist()!.body.owner.display_name!,
+                uri: playlist()!.body.owner.uri,
+              }}
+              playlistNameInfoStore={[
+                playlistNameInfoStore,
+                setPlaylistNameInfoStore,
+              ]}
+              playlistDescriptionInfoStore={[
+                playlistDescriptionInfoStore,
+                setPlaylistDescriptionInfoStore,
+              ]}
+              playlistChangesExist={playlistChangesExist}
+              cardOpened={cardOpened}
+              handleCancelClick={handleCancelClick}
+              handleShowPlaylistDetailsClick={handleShowPlaylistDetailsClick}
+            />
+          </Show>
+        </Match>
+        <Match when={!spotifyPlaylistId}>
+          <PlaylistCardContentPart
+            playlistImageUrl={"src/assets/images/empty_playlist.png"}
+            playlistName={name}
+            playlistNameInfoStore={[
+              playlistNameInfoStore,
+              setPlaylistNameInfoStore,
+            ]}
+            playlistDescriptionInfoStore={[
+              playlistDescriptionInfoStore,
+              setPlaylistDescriptionInfoStore,
+            ]}
+            playlistChangesExist={playlistChangesExist}
+            cardOpened={cardOpened}
+            handleCancelClick={handleCancelClick}
+            handleShowPlaylistDetailsClick={handleShowPlaylistDetailsClick}
+          />
+        </Match>
+      </Switch>
       <PlaylistCardModalPart />
     </div>
   );

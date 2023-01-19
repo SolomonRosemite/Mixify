@@ -29,9 +29,7 @@ const PlaylistCardContentPart: Component<PlaylistCardContentProps> = ({
   handleCancelClick,
 }) => {
   return (
-    <div
-      class={"dropdown dropdown-top" + (cardOpened() ? " dropdown-open" : "")}
-    >
+    <div class={"dropdown" + (cardOpened() ? " dropdown-open" : "")}>
       <label tabindex="0">
         <div
           class="card custom-button w-52 bg-base-100 shadow-xl image-full"
