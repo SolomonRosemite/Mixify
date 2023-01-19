@@ -6,6 +6,7 @@ import {
 import { sleep } from "../../utils/common";
 import { drawLineBetweenElements as drawLineBetweenElementsUnsafe } from "../../utils/html/dangerous-html-helpers";
 import PlaylistCard from "./PlaylistCard";
+import "./PlaylistGraphOverview.style.css";
 
 const PlaylistGraphOverview: ComponentWithAppStore = ({ appStore }) => {
   const [playlistLayers, setPlaylistLayers] = createSignal<PlaylistLayer[]>([]);
