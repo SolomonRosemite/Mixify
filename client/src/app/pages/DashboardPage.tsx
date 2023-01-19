@@ -2,7 +2,7 @@ import { createEffect, createResource, Show } from "solid-js";
 import {
   ComponentWithAppStore,
   PlaylistAssociation,
-  PlaylistConfiguration,
+  PlaylistConfiguration
 } from "../../types/types";
 import { usePlaylistConfigurationQuery } from "../../utils/gql/queries";
 import CurrentSelectedPlaylistInfoPanel from "../Components/CurrentSelectedPlaylistInfoPanel";
@@ -12,7 +12,7 @@ import PlaylistsConfigurationPanel from "../Components/PlaylistsConfigurationPan
 const DashboardPage: ComponentWithAppStore = ({ appStore }) => {
   const [configuration, { refetch }] = createResource(() =>
     // TODO: Remove hard coded id
-    usePlaylistConfigurationQuery("2")
+    usePlaylistConfigurationQuery("3")
   );
   const [store, setStore] = appStore;
 

@@ -1,6 +1,8 @@
 import { Component } from "solid-js";
 import { SetStoreFunction } from "solid-js/store";
 
+export type GetSetStore<T> = [T, SetStoreFunction<T>];
+
 export type AppStore = {
   user?: {
     id: string;
@@ -18,7 +20,7 @@ export type ComponentWithProps<T> = Component<{
   props: T;
 }>;
 export type ComponentWithAppStore = Component<{
-  appStore: [AppStore, SetStoreFunction<AppStore>];
+  appStore: GetSetStore<AppStore>;
 }>;
 
 export type PlaylistConfiguration = {
