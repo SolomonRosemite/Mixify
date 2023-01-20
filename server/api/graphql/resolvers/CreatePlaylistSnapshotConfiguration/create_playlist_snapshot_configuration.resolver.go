@@ -95,6 +95,7 @@ func createPlaylists(dbPlaylists *[]*models.PlaylistSnapshot) []*model.PlaylistS
 			ID:                fmt.Sprint(dbP.ID),
 			Name:              *dbP.Name,
 			SpotifyPlaylistID: dbP.SpotifyPlaylistID,
+			IsMixstack:        *dbP.IsMixStack,
 			PlaylistOrder:     createPlaylistOrder(dbP.PlaylistsOrder),
 			Associations:      createAssociations(dbP.Associations),
 		}

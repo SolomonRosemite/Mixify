@@ -14,7 +14,7 @@ import { TypedDocumentNode as DocumentNode } from '@graphql-typed-document-node/
  */
 const documents = {
     "query ConfirmConfirmationCode($code: String!, $secret: String!) {\n  confirmConfirmationCode(confirmationCode: $code, confirmationSecret: $secret) {\n    email\n    id\n  }\n}": types.ConfirmConfirmationCodeDocument,
-    "query Configurations($id: ID!) {\n  configurations(id: $id) {\n    id\n    playlists {\n      id\n      name\n      spotifyPlaylistId\n      playlistOrder\n      associations {\n        id\n        childPlaylistId\n        parentPlaylistId\n      }\n    }\n  }\n}": types.ConfigurationsDocument,
+    "query Configurations($id: ID!) {\n  configurations(id: $id) {\n    id\n    playlists {\n      id\n      name\n      spotifyPlaylistId\n      isMixstack\n      playlistOrder\n      associations {\n        id\n        childPlaylistId\n        parentPlaylistId\n      }\n    }\n  }\n}": types.ConfigurationsDocument,
     "query RequestAccessToken {\n  requestAccessToken {\n    accessToken\n    expiresIn\n  }\n}": types.RequestAccessTokenDocument,
     "query RequestUserConfirmationCode($email: String!) {\n  requestConfirmationCode(email: $email) {\n    confirmationSecret\n  }\n}": types.RequestUserConfirmationCodeDocument,
 };
@@ -26,7 +26,7 @@ export function graphql(source: "query ConfirmConfirmationCode($code: String!, $
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
-export function graphql(source: "query Configurations($id: ID!) {\n  configurations(id: $id) {\n    id\n    playlists {\n      id\n      name\n      spotifyPlaylistId\n      playlistOrder\n      associations {\n        id\n        childPlaylistId\n        parentPlaylistId\n      }\n    }\n  }\n}"): (typeof documents)["query Configurations($id: ID!) {\n  configurations(id: $id) {\n    id\n    playlists {\n      id\n      name\n      spotifyPlaylistId\n      playlistOrder\n      associations {\n        id\n        childPlaylistId\n        parentPlaylistId\n      }\n    }\n  }\n}"];
+export function graphql(source: "query Configurations($id: ID!) {\n  configurations(id: $id) {\n    id\n    playlists {\n      id\n      name\n      spotifyPlaylistId\n      isMixstack\n      playlistOrder\n      associations {\n        id\n        childPlaylistId\n        parentPlaylistId\n      }\n    }\n  }\n}"): (typeof documents)["query Configurations($id: ID!) {\n  configurations(id: $id) {\n    id\n    playlists {\n      id\n      name\n      spotifyPlaylistId\n      isMixstack\n      playlistOrder\n      associations {\n        id\n        childPlaylistId\n        parentPlaylistId\n      }\n    }\n  }\n}"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

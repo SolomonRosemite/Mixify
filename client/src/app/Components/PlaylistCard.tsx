@@ -14,7 +14,7 @@ export type PlaylistInfoInputStore = {
 };
 
 const PlaylistCard: ComponentWithProps<PlaylistConfiguration> = ({ props }) => {
-  const { name, spotifyPlaylistId, associations } = props;
+  const { name, spotifyPlaylistId, isMixstack } = props;
   const [accessToken, setAccessToken] = createSignal<string | undefined>();
   const [playlistChangesExist, setPlaylistChangesExist] = createSignal(false);
   const [cardOpened, setCardOpened] = createSignal(false);
@@ -82,6 +82,7 @@ const PlaylistCard: ComponentWithProps<PlaylistConfiguration> = ({ props }) => {
         <Match when={spotifyPlaylistId}>
           <Show when={playlist()} fallback={<div>loading or error</div>}>
             <PlaylistCardContentPart
+              playlistIsMixstack={isMixstack}
               playlistDescription={playlist()!.body.description ?? undefined}
               playlistImageUrl={playlist()!.body.images[0].url}
               playlistName={name}
@@ -108,6 +109,7 @@ const PlaylistCard: ComponentWithProps<PlaylistConfiguration> = ({ props }) => {
           <PlaylistCardContentPart
             playlistImageUrl={"src/assets/images/empty_playlist.png"}
             playlistName={name}
+            playlistIsMixstack={isMixstack}
             playlistNameInfoStore={[
               playlistNameInfoStore,
               setPlaylistNameInfoStore,

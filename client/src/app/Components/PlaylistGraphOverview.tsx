@@ -22,6 +22,7 @@ const PlaylistGraphOverview: ComponentWithAppStore = ({ appStore }) => {
     const root: PlaylistConfiguration = {
       id: "root",
       name: "root",
+      isMixstack: true,
       associations: parents.map((p) => ({
         id: "test",
         child: p,
@@ -57,7 +58,7 @@ const PlaylistGraphOverview: ComponentWithAppStore = ({ appStore }) => {
 
   return (
     <div>
-      <div class="h-[90vh] overflow-x-auto overflow-y-auto flex flex-col justify-evenly">
+      <div class="h-[95vh] overflow-x-auto overflow-y-auto flex flex-col justify-evenly">
         <For each={playlistLayers()} fallback={<div>No items</div>}>
           {(layer, layerIndex) => (
             <div class="flex justify-evenly" data-index={layerIndex()}>
@@ -73,14 +74,14 @@ const PlaylistGraphOverview: ComponentWithAppStore = ({ appStore }) => {
         </For>
       </div>
       <div class="flex justify-between">
-        <div class="mx-7 mt-16">
+        <div class="mx-7 mt-3">
           <button class="btn gap-2">
             <img
               class="w-10"
               src="/src/assets/images/add-outline.svg"
               alt="add icon"
             />
-            Add base playlist
+            Add normal playlist
           </button>
           <button class="btn ml-7">
             <img
@@ -91,7 +92,7 @@ const PlaylistGraphOverview: ComponentWithAppStore = ({ appStore }) => {
             Add mixstack
           </button>
         </div>
-        <div class="mx-7 mt-16">
+        <div class="mx-7 mt-3">
           <button
             class={
               "btn btn-success" +
