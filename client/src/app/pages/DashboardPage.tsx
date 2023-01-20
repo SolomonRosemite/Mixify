@@ -2,7 +2,7 @@ import { createEffect, createResource, Show } from "solid-js";
 import {
   ComponentWithAppStore,
   PlaylistAssociation,
-  PlaylistConfiguration
+  PlaylistConfiguration,
 } from "../../types/types";
 import { usePlaylistConfigurationQuery } from "../../utils/gql/queries";
 import CurrentSelectedPlaylistInfoPanel from "../Components/CurrentSelectedPlaylistInfoPanel";
@@ -32,6 +32,7 @@ const DashboardPage: ComponentWithAppStore = ({ appStore }) => {
       id: p.id,
       name: p.name,
       spotifyPlaylistId: p.spotifyPlaylistId ?? undefined,
+      isMixstack: p.isMixstack,
       associations: [],
     }));
 

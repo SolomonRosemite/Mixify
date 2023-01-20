@@ -26,6 +26,7 @@ export type ComponentWithAppStore = Component<{
 export type PlaylistConfiguration = {
   id: string;
   name: string;
+  isMixstack: boolean;
   spotifyPlaylistId?: string | null;
   associations: PlaylistAssociation[];
 };

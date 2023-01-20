@@ -65,6 +65,7 @@ export type PlaylistSnapshot = {
   __typename?: 'PlaylistSnapshot';
   associations: Array<PlaylistAssociationSnapshot>;
   id: Scalars['ID'];
+  isMixstack: Scalars['Boolean'];
   name: Scalars['String'];
   playlistOrder: Array<Maybe<Scalars['Int']>>;
   spotifyPlaylistId?: Maybe<Scalars['String']>;
@@ -146,7 +147,7 @@ export type ConfigurationsQueryVariables = Exact<{
 }>;
 
 
-export type ConfigurationsQuery = { __typename?: 'Query', configurations: { __typename?: 'PlaylistSnapshotConfiguration', id: string, playlists: Array<{ __typename?: 'PlaylistSnapshot', id: string, name: string, spotifyPlaylistId?: string | null, playlistOrder: Array<number | null>, associations: Array<{ __typename?: 'PlaylistAssociationSnapshot', id: string, childPlaylistId: string, parentPlaylistId: string }> }> } };
+export type ConfigurationsQuery = { __typename?: 'Query', configurations: { __typename?: 'PlaylistSnapshotConfiguration', id: string, playlists: Array<{ __typename?: 'PlaylistSnapshot', id: string, name: string, spotifyPlaylistId?: string | null, isMixstack: boolean, playlistOrder: Array<number | null>, associations: Array<{ __typename?: 'PlaylistAssociationSnapshot', id: string, childPlaylistId: string, parentPlaylistId: string }> }> } };
 
 export type RequestAccessTokenQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -186,6 +187,7 @@ export const ConfigurationsDocument = gql`
       id
       name
       spotifyPlaylistId
+      isMixstack
       playlistOrder
       associations {
         id

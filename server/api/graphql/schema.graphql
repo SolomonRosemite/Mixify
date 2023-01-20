@@ -13,6 +13,7 @@ type PlaylistSnapshot {
   id: ID!
   name: String!
   spotifyPlaylistId: String
+  isMixstack: Boolean!
   playlistOrder: [Int]!
   associations: [PlaylistAssociationSnapshot!]!
 }

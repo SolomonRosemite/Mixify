@@ -33,6 +33,7 @@ type PlaylistSnapshot struct {
 	ID                string                         `json:"id"`
 	Name              string                         `json:"name"`
 	SpotifyPlaylistID *string                        `json:"spotifyPlaylistId"`
+	IsMixstack        bool                           `json:"isMixstack"`
 	PlaylistOrder     []*int                         `json:"playlistOrder"`
 	Associations      []*PlaylistAssociationSnapshot `json:"associations"`
 }

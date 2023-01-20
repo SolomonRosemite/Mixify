@@ -5,6 +5,7 @@ query Configurations($id: ID!) {
       id
       name
       spotifyPlaylistId
+      isMixstack
       playlistOrder
       associations {
         id

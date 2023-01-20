@@ -7,6 +7,7 @@ type PlaylistCardContentProps = {
   playlistName: string;
   playlistDescription?: string;
   playlistImageUrl: string;
+  playlistIsMixstack: boolean;
   playlistOwner?: { displayName: string; uri: string };
   playlistNameInfoStore: GetSetStore<PlaylistInfoInputStore>;
   playlistDescriptionInfoStore: GetSetStore<PlaylistInfoInputStore>;
@@ -20,6 +21,7 @@ const PlaylistCardContentPart: Component<PlaylistCardContentProps> = ({
   playlistName,
   playlistDescription,
   playlistImageUrl,
+  playlistIsMixstack,
   playlistOwner,
   playlistNameInfoStore,
   playlistDescriptionInfoStore,
@@ -42,25 +44,35 @@ const PlaylistCardContentPart: Component<PlaylistCardContentProps> = ({
               class="aspect-square"
             />
           </figure>
-          <div class="card-body">
-            <h2 class="card-title">{playlistName}</h2>
-            <p>{playlistDescription}</p>
+          <div class="card-body pb-5 pr-5 pl-7 pt-7 flex flex-col justify-between">
+            <div>
+              <h2 class="card-title">{playlistName}</h2>
+              <p>{playlistDescription}</p>
+            </div>
+            <div class="flex flex-row justify-between">
+              <div />
+              <div>
+                <p>{playlistIsMixstack ? "Mixstack" : "Normal playlist"}</p>
+              </div>
+            </div>
           </div>
         </div>
       </label>
       <div
         tabindex="0"
-        class="dropdown-content menu p-4 shadow bg-base-200 rounded-box w-[19vw]"
+        class="dropdown-content menu p-4 shadow bg-base-200 rounded-box w-[15vw]"
         id={playlistName}
       >
         <div class="flex justify-between">
           <div class="flex">
             <div>
-              <img
-                class="h-16 w-16 rounded m-0 aspect-square"
-                src={playlistImageUrl}
-                alt="Playlist logo"
-              />
+              <figure>
+                <img
+                  class="h-16 w-16 rounded m-0 aspect-square opacity-70"
+                  src={playlistImageUrl}
+                  alt="Playlist logo"
+                />
+              </figure>
             </div>
             <Show when={playlistOwner} fallback={<></>}>
               <div class="ml-3 flex flex-col justify-between">
