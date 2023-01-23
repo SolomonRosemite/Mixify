@@ -1,5 +1,6 @@
 import { Component } from "solid-js";
 import { SetStoreFunction } from "solid-js/store";
+import SpotifyWebApi from "spotify-web-api-node";
 
 export type GetSetStore<T> = [T, SetStoreFunction<T>];
 
@@ -8,6 +9,7 @@ export type AppStore = {
     id: string;
     email: string;
   };
+  spotifyClient?: SpotifyWebApi;
   playlistConfigurations: PlaylistConfiguration[];
 };
 
