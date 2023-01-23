@@ -1,8 +1,11 @@
 import { createResource, createSignal, Match, Show, Switch } from "solid-js";
 import { createStore } from "solid-js/store";
-import SpotifyWebApi from "spotify-web-api-node";
-import { ComponentWithProps, PlaylistConfiguration } from "../../types/types";
-import { requestAccessTokenQuery } from "../../utils/gql/queries";
+import {
+  AppStore,
+  ComponentWithProps,
+  GetSetStore,
+  PlaylistConfiguration,
+} from "../../types/types";
 import PlaylistCardContentPart from "./Partials/PlaylistCard/PlaylistCardContentPart";
 import PlaylistCardModalPart from "./Partials/PlaylistCard/PlaylistCardModalPart";
 import "./PlaylistCard.style.css";
@@ -13,9 +16,15 @@ export type PlaylistInfoInputStore = {
   isEditMode: boolean;
 };
 
-const PlaylistCard: ComponentWithProps<PlaylistConfiguration> = ({ props }) => {
-  const { name, spotifyPlaylistId, isMixstack } = props;
-  const [accessToken, setAccessToken] = createSignal<string | undefined>();
+export type PlaylistCardProps = {
+  playlist: PlaylistConfiguration;
+  appStore: GetSetStore<AppStore>;
+};
+
+const PlaylistCard: ComponentWithProps<PlaylistCardProps> = ({ props }) => {
+  const { name, spotifyPlaylistId, isMixstack } = props.playlist;
+  const [store] = props.appStore;
+
   const [playlistChangesExist, setPlaylistChangesExist] = createSignal(false);
   const [cardOpened, setCardOpened] = createSignal(false);
   const [playlistDescriptionInfoStore, setPlaylistDescriptionInfoStore] =
@@ -26,39 +35,26 @@ const PlaylistCard: ComponentWithProps<PlaylistConfiguration> = ({ props }) => {
   const [playlistNameInfoStore, setPlaylistNameInfoStore] =
     createStore<PlaylistInfoInputStore>({ isEditMode: false, value: name });
 
-  const spotifyApi = new SpotifyWebApi();
+  const [playlist] = createResource(
+    () => store.spotifyClient,
+    async (client) => {
+      if (!spotifyPlaylistId) {
+        return undefined;
+      }
 
-  const [playlist] = createResource(accessToken, async () => {
-    if (!spotifyPlaylistId) {
-      return undefined;
+      const response = await client.getPlaylist(spotifyPlaylistId);
+
+      if (response.statusCode !== 200) {
+        console.error(response.body);
+        return undefined;
+      } else if (response.body.description) {
+        setPlaylistDescriptionInfoStore({
+          value: response.body.description,
+        });
+      }
+      return response;
     }
-
-    const response = await spotifyApi.getPlaylist(spotifyPlaylistId);
-
-    if (response.statusCode !== 200) {
-      console.error(response.body);
-      return undefined;
-    } else if (response.body.description) {
-      setPlaylistDescriptionInfoStore({
-        value: response.body.description,
-      });
-    }
-    return response;
-  });
-
-  createResource(async () => {
-    const response = await requestAccessTokenQuery();
-
-    if (response.error) {
-      console.error(response.error);
-      return;
-    }
-
-    const { accessToken, expiresIn } = response.data!.requestAccessToken;
-
-    spotifyApi.setAccessToken(accessToken);
-    setAccessToken(accessToken);
-  });
+  );
 
   const handleShowPlaylistDetailsClick = () => {
     setCardOpened(true);
