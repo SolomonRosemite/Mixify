@@ -1,6 +1,0 @@
-query RequestAccessToken {
-  requestAccessToken {
-    accessToken
-    expiresIn
-  }
-}
