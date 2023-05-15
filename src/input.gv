@@ -1,0 +1,10 @@
+
+digraph G {
+  Chill_lofi [URL="https://open.spotify.com/playlist/44xuOOjdOcWDeVsIthiEUG"];
+  More_Lofi [URL="https://open.spotify.com/playlist/6wrY4pcN1Q1yQV8fmmf4Dk"];
+  Lofi [label="all Lofi songs"];
+
+
+  Chill_lofi -> Lofi;
+  More_Lofi -> Lofi;
+}
