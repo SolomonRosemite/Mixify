@@ -6,3 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+clap = "4.3.0"
+graphviz-dot-parser = "0.0.3"
+rspotify = {version = "0.11.7", features = ["env-file", "cli"]}
+
+[dev-dependencies]
+tokio = "1.28.1"
