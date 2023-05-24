@@ -1,3 +1,9 @@
+mod args;
+
+use args::MixifyArgs;
+use clap::Parser;
+
 fn main() {
-    println!("Hello, cli!");
+    let args = MixifyArgs::parse();
+    println!("{:?}", args);
 }
