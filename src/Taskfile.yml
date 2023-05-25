@@ -1,0 +1,7 @@
+version: "3"
+
+tasks:
+  create_stuff:
+    cmds:
+      - "dot -Tpng snapshots/2/2_test.edit.gv -o output.png"
+    silent: true
