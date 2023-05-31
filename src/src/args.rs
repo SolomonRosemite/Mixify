@@ -35,11 +35,11 @@ pub struct NewCommand {
 #[derive(Debug, Args)]
 pub struct PlanCommand {
     /// The id of the snapshot, if not provided, the latest snapshot will be used
-    pub id: Option<u32>,
+    pub id: u32,
 }
 
 #[derive(Debug, Args)]
 pub struct ApplyCommand {
     /// The id of the snapshot, if not provided, the latest snapshot will be used
-    pub id: Option<u32>,
+    pub id: u32,
 }
