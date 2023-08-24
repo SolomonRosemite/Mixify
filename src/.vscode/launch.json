@@ -7,7 +7,21 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "Debug executable 'mixify'",
+      "name": "mixify, plan 1",
+      "cargo": {
+        "args": ["build", "--bin=mixify", "--package=mixify"],
+        "filter": {
+          "name": "mixify",
+          "kind": "bin"
+        }
+      },
+      "args": ["plan", "1"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "mixify, apply 1",
       "cargo": {
         "args": ["build", "--bin=mixify", "--package=mixify"],
         "filter": {
@@ -16,48 +30,6 @@
         }
       },
       "args": ["apply", "1"],
-      "cwd": "${workspaceFolder}"
-    },
-    {
-      "type": "lldb",
-      "request": "launch",
-      "name": "Debug unit tests in executable 'mixify'",
-      "cargo": {
-        "args": ["test", "--no-run", "--bin=mixify", "--package=mixify"],
-        "filter": {
-          "name": "mixify",
-          "kind": "bin"
-        }
-      },
-      "args": [],
-      "cwd": "${workspaceFolder}"
-    },
-    {
-      "type": "lldb",
-      "request": "launch",
-      "name": "Debug executable 'server'",
-      "cargo": {
-        "args": ["build", "--bin=server", "--package=mixify"],
-        "filter": {
-          "name": "server",
-          "kind": "bin"
-        }
-      },
-      "args": [],
-      "cwd": "${workspaceFolder}"
-    },
-    {
-      "type": "lldb",
-      "request": "launch",
-      "name": "Debug unit tests in executable 'server'",
-      "cargo": {
-        "args": ["test", "--no-run", "--bin=server", "--package=mixify"],
-        "filter": {
-          "name": "server",
-          "kind": "bin"
-        }
-      },
-      "args": [],
       "cwd": "${workspaceFolder}"
     }
   ]
