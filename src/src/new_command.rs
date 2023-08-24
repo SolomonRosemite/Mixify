@@ -29,8 +29,7 @@ pub fn handle_new_snapshot(cmd: &args::NewCommand) {
     let file_name = format!("snapshots/{}/{}_{}.edit.gv", new_id, new_id, cmd.name);
     let snapshot_folder_name = format!("snapshots/{}/{}", new_id, new_id);
     let content = format!(
-        "
-// Name: {}
+        "// Name: {}
 // Created at: {}
 
 digraph G {{
