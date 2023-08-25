@@ -1,4 +1,4 @@
-use std::{fs, io};
+use std::{fs, io, panic};
 
 use graphviz_dot_parser::types::Stmt;
 
@@ -83,35 +83,39 @@ pub fn create_execution_plan(snapshot_id: u32) {
     let mut nodes: Vec<NodeData> = Vec::new();
     let mut edges: Vec<EdgeData> = Vec::new();
     let mut root_nodes: Vec<String> = Vec::new();
-    let mut can_not_be_root_node: Vec<String> = Vec::new();
 
-    gv.stmt.iter().for_each(|x| match x {
+    // NOTE: Important for this to work. All nodes must be defined in the graph. Otherwise it will panic.
+    // In other words, edges that dont point to a node explicitly defined in the graph will cause a panic.
+    // TODO: Technically, we can look what nodes are missing and add them to the graph or let the user know. (I believe)
+    let result = panic::catch_unwind(|| gv.to_directed_graph());
+    let graph = match result {
+        Ok(g) => g.unwrap(),
+        Err(_) => panic!(
+            "Failed to create graph. There is a chance you forgot to define a node in the graph."
+        ),
+    };
+
+    gv.stmt.iter().for_each(|stmt| match stmt {
         Stmt::Edge(from, to, attrs) => {
-            can_not_be_root_node.push(from.to_string());
             edges.push((from.to_string(), to.to_string(), attrs.clone()));
         }
-        _ => {}
-    });
+        Stmt::Node(node, attrs) => {
+            let node_index = graph.node_indices().find(|i| graph[*i] == *node).unwrap();
+            let number_of_outgoing_edges = graph
+                .neighbors_directed(node_index, petgraph::Direction::Outgoing)
+                .count();
 
-    // TODO: Use this here to get the root nodes.
-    // let node_index = graph.node_indices().find(|i| graph[*i] == *node).unwrap();
-    // let nei = graph.neighbors_directed(node_index, petgraph::Direction::Incoming);
-    gv.stmt.iter().for_each(|x| match x {
-        Stmt::Edge(from, to, attrs) => {
-            if !can_not_be_root_node.contains(to) && !root_nodes.contains(to) {
-                root_nodes.push(to.to_string());
+            if number_of_outgoing_edges == 0 {
+                root_nodes.push(node.to_string());
             }
+
+            nodes.push((node.to_string(), attrs.clone()));
         }
-        Stmt::Node(node, attrs) => nodes.push((node.to_string(), attrs.clone())),
         _ => {}
     });
 
     println!("root_nodes: {:?}", root_nodes);
     let mut all_actions: Vec<Vec<Action>> = Vec::new();
-
-    // TODO: Important for this to work. All nodes must be defined in the graph. Otherwise it will panic.
-    // In other words, edges that dont point to a node explicitly defined in the graph will cause a panic.
-    let graph = gv.to_directed_graph().unwrap();
 
     for root in root_nodes {
         // TODO: Not sure about index 1. Since we are using a directed graph, we can have multiple root nodes.
