@@ -80,7 +80,12 @@ pub fn create_execution_plan(snapshot_id: u32) {
     let content = data.first().unwrap().as_ref().unwrap();
     let gv = graphviz_dot_parser::parse(&content).unwrap();
 
-    let mut nodes: Vec<NodeData> = Vec::new();
+    let mixify_root_node = (
+        constants::MIXIFY_TEMPORARY_ROOT_NODE_NAME.to_string(),
+        vec![],
+    );
+
+    let mut nodes: Vec<NodeData> = vec![mixify_root_node];
     let mut edges: Vec<EdgeData> = Vec::new();
     let mut root_nodes: Vec<String> = Vec::new();
 
@@ -88,7 +93,7 @@ pub fn create_execution_plan(snapshot_id: u32) {
     // In other words, edges that dont point to a node explicitly defined in the graph will cause a panic.
     // TODO: Technically, we can look what nodes are missing and add them to the graph or let the user know. (I believe)
     let result = panic::catch_unwind(|| gv.to_directed_graph());
-    let graph = match result {
+    let mut graph = match result {
         Ok(g) => g.unwrap(),
         Err(_) => panic!(
             "Failed to create graph. There is a chance you forgot to define a node in the graph."
@@ -115,13 +120,20 @@ pub fn create_execution_plan(snapshot_id: u32) {
     });
 
     println!("root_nodes: {:?}", root_nodes);
-    let mut all_actions: Vec<Vec<Action>> = Vec::new();
 
-    for root in root_nodes {
-        // TODO: Not sure about index 1. Since we are using a directed graph, we can have multiple root nodes.
-        let res = create_node_execution_plan(1, &root, &nodes, &edges, &graph);
-        all_actions.push(res);
+    let root = constants::MIXIFY_TEMPORARY_ROOT_NODE_NAME.to_string();
+    let idx = graph.add_node(root.clone());
+    for root in &root_nodes {
+        graph.add_edge(
+            graph.node_indices().find(|i| graph[*i] == *root).unwrap(),
+            idx,
+            (),
+        );
     }
+
+    let mut all_actions: Vec<Vec<Action>> = Vec::new();
+    let res = create_node_execution_plan(1, &root, &nodes, &edges, &graph);
+    all_actions.push(res);
 
     for actions in all_actions {
         for action in actions {
