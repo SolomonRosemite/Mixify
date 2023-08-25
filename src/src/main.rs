@@ -21,6 +21,7 @@ async fn main() {
 
     return;
 
+    // TODO: Use logger instead of println?
     env_logger::init();
     let creds = Credentials::from_env().unwrap();
     println!("{:?}", creds);
