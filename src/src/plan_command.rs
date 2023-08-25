@@ -1,6 +1,7 @@
 use std::{fs, io, panic};
 
-use graphviz_dot_parser::types::Stmt;
+use anyhow::anyhow;
+use graphviz_dot_parser::types::{GraphAST, Stmt};
 
 use crate::constants;
 
@@ -89,16 +90,14 @@ pub fn create_execution_plan(snapshot_id: u32) {
     let mut edges: Vec<EdgeData> = Vec::new();
     let mut root_nodes: Vec<String> = Vec::new();
 
+    if let Err(e) = validate_graph(&gv) {
+        panic!("{}", e);
+    }
+
     // NOTE: Important for this to work. All nodes must be defined in the graph. Otherwise it will panic.
     // In other words, edges that dont point to a node explicitly defined in the graph will cause a panic.
-    // TODO: Technically, we can look what nodes are missing and add them to the graph or let the user know. (I believe)
-    let result = panic::catch_unwind(|| gv.to_directed_graph());
-    let mut graph = match result {
-        Ok(g) => g.unwrap(),
-        Err(_) => panic!(
-            "Failed to create graph. There is a chance you forgot to define a node in the graph."
-        ),
-    };
+    // This is why we validate the graph before we do anything else.
+    let mut graph = gv.to_directed_graph().unwrap();
 
     gv.stmt.iter().for_each(|stmt| match stmt {
         Stmt::Edge(from, to, attrs) => {
@@ -226,4 +225,36 @@ fn create_node_execution_plan(
 
     actions.push(action);
     return actions;
+}
+
+fn validate_graph(graph: &GraphAST) -> Result<(), anyhow::Error> {
+    let mut nodes: Vec<String> = Vec::new();
+    let mut nodes_from_edges: Vec<String> = Vec::new();
+
+    graph.stmt.iter().for_each(|stmt| match stmt {
+        Stmt::Edge(from, to, _) => {
+            if !nodes_from_edges.contains(from) {
+                nodes_from_edges.push(from.to_string());
+            }
+            if !nodes_from_edges.contains(to) {
+                nodes_from_edges.push(to.to_string());
+            }
+        }
+        Stmt::Node(node, _) => {
+            nodes.push(node.to_string());
+        }
+        _ => {}
+    });
+
+    for node in nodes_from_edges {
+        if !nodes.contains(&node) {
+            let error = anyhow::anyhow!(
+                "Node {:?} is used for an edge but not defined as node in the graph file. Please define it. It should look like this: {}",
+                node, format!("{} [label={:?}];", node, "a playlist name of your choice"));
+
+            return Err(error);
+        }
+    }
+
+    return Ok(());
 }
