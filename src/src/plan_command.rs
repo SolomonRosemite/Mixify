@@ -13,6 +13,7 @@ type NodeData = (String, graphviz_dot_parser::types::Attributes);
 struct Action {
     action_type: ActionType,
     node: String,
+    for_node: String,
     idx: usize,
 }
 
@@ -153,8 +154,8 @@ pub fn create_execution_plan(snapshot_id: u32) {
     for actions in all_actions {
         for action in actions {
             println!(
-                "{}, {:?}, {:?}",
-                action.idx, action.action_type, action.node
+                "{:?} from {} for/to {}",
+                action.action_type, action.node, action.for_node,
             );
         }
     }
@@ -200,6 +201,7 @@ fn create_node_execution_plan(
             action_type: ActionType::CopySongs,
             node: n,
             idx,
+            for_node: node.clone(),
         };
         final_node_actions.push(action);
     }
@@ -214,8 +216,9 @@ fn create_node_execution_plan(
             action_type: ActionType::RemoveSongs,
             node: n.clone(),
             idx,
+            for_node: node.clone(),
         };
-        actions.push(action);
+        final_node_actions.push(action);
     }
 
     let (_, attr) = nodes.iter().find(|(name, _)| *name == *node).unwrap();
@@ -230,6 +233,7 @@ fn create_node_execution_plan(
         action_type,
         node: node.clone(),
         idx,
+        for_node: node.clone(),
     };
 
     for action in final_node_actions {
