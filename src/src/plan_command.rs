@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, io};
 
 use graphviz_dot_parser::types::Stmt;
 
@@ -45,71 +45,39 @@ pub fn create_execution_plan(snapshot_id: u32) {
     // Write the list of actions to a file
     // Return the list of actions
 
-    // let folder = format!("snapshots/{}/", snapshot_id);
-    // let error_msg = format!("expected to find snapshot folder: {}", folder);
+    let directory_path = format!("snapshots/{}/", snapshot_id);
+    let data = std::fs::read_dir(&directory_path)
+        .expect(&format!(
+            "expected to find snapshot folder: {}",
+            directory_path
+        ))
+        .map(|entry| {
+            let path = entry.unwrap().path().canonicalize().unwrap();
+            println!("found path: {:?}", path);
+            return path;
+        })
+        .filter(|path| path.is_file() && path.to_str().unwrap().ends_with("edit.gv"))
+        .map(|file_path| fs::read_to_string(file_path))
+        .collect::<Vec<io::Result<String>>>();
 
-    // let found_files: Vec<_> = std::fs::read_dir(&folder).expect(&error_msg).collect();
+    if data.len() == 0 {
+        panic!(
+            "{}",
+            format!("No *.edit.gv file found in {} folder", &directory_path)
+        );
+    }
 
-    // found_files
-    //     .iter()
-    //     .for_each(|dir| println!("Found: {:?}", dir));
+    if data.len() > 1 {
+        panic!(
+            "{}",
+            format!(
+                "More than one *.edit.gv file found in {} folder. Expected only one since mixify doesn't know which one to use.",
+                &directory_path
+            )
+        );
+    }
 
-    // let file = found_files
-    //     .iter()
-    //     .filter(|dir| {
-    //         dir.expect("")
-    //             .file_name()
-    //             .to_str()
-    //             .unwrap()
-    //             .contains("edit.gv")
-    //     })
-    //     .map(|dir| dir.unwrap().file_name().to_str().unwrap())
-    //     .collect::<Vec<&str>>()
-    //     .first();
-
-    // match file {
-    //     Some(file) => println!("Found: {}", file),
-    //     None => {
-    //         let err = format!("No edit.gv file found in {}", folder);
-    //         panic!("{}", err);
-    //     }
-    // }
-
-    // let directory_path = format!("snapshots/{}", snapshot_id);
-    //
-    // let x: Vec<_> = fs::read_dir(directory_path)
-    //     .unwrap()
-    //     // .filter_map(Result::ok)
-    //     .map(|entry| entry.unwrap().path().canonicalize())
-    //     .filter_map(Result::ok)
-    //     .filter(|path| path.is_file() && path.ends_with("edit.gv"))
-    //     .map(|file_path| {
-    //         return fs::read_to_string(file_path)
-    //             .map(|file_contents| println!("File contents: {}", file_contents));
-    //     })
-    //     .collect();
-
-    // println!("x: {:?}", x);
-
-    // let snapshot_file = format!("snapshots/{}/snapshot.json", cmd.id);
-    // let error_msg = format!("expected to find snapshot file: {}", snapshot_file);
-
-    // let snapshot_file = std::fs::read_to_string(&snapshot_file).expect(&error_msg);
-
-    // let current_state_file = format!("snapshots/{}/current_state.json", cmd.id);
-
-    // let current_state_file = std::fs::read_to_string(&current_state_file);
-
-    // let current_state_file = match current_state_file {
-    //     Ok(file) => Some(file),
-    //     Err(_) => None,
-    // };
-
-    // ----------------------------------------
-
-    let snapshot_file = format!("snapshots/1/1_init.edit.gv");
-    let content = fs::read_to_string(&snapshot_file).expect("expected to find snapshot file");
-
+    let content = data.first().unwrap().as_ref().unwrap();
     let gv = graphviz_dot_parser::parse(&content).unwrap();
 
     let mut nodes: Vec<NodeData> = Vec::new();
