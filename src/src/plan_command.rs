@@ -2,6 +2,7 @@ use std::{fs, io, panic};
 
 use anyhow::anyhow;
 use graphviz_dot_parser::types::{GraphAST, Stmt};
+use url::{ParseError, Url};
 
 use crate::constants;
 
@@ -108,9 +109,32 @@ pub fn create_execution_plan(snapshot_id: u32) {
             let number_of_outgoing_edges = graph
                 .neighbors_directed(node_index, petgraph::Direction::Outgoing)
                 .count();
+            let number_of_incoming_edges = graph
+                .neighbors_directed(node_index, petgraph::Direction::Incoming)
+                .count();
 
             if number_of_outgoing_edges == 0 {
                 root_nodes.push(node.to_string());
+            }
+
+            // All base nodes should have a spotify url attribute.
+            if number_of_incoming_edges == 0 && number_of_outgoing_edges > 0 {
+                let attr = attrs
+                    .iter()
+                    .find(|(k, _)| k == constants::URL_ATTRIBUTE_KEY);
+
+                if attr.is_none() {
+                    panic!(
+                        "Node {:?} is a base node and should have a spotify url attribute",
+                        node
+                    );
+                }
+
+                let (_, url) = attr.unwrap();
+                let _ = Url::parse(url).expect(&format!(
+                    "the url attribute of {:?} is not a valid url",
+                    node
+                ));
             }
 
             nodes.push((node.to_string(), attrs.clone()));

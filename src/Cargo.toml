@@ -14,6 +14,7 @@ petgraph = "0.5.1"
 rspotify = {version = "0.11.7", features = ["client-reqwest", "reqwest-native-tls", "env-file", "cli"]}
 tokio = { version = "1.31.0", features = ["full"] }
 env_logger = { version = "0.9.0", default-features = false }
+url = "2.4.0"
 
 [dev-dependencies]
 tokio = "1.28.1"
