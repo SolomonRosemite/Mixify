@@ -1,10 +1,10 @@
-use std::{fs, io, panic};
+use std::{fs, io};
 
 use anyhow::anyhow;
 use graphviz_dot_parser::types::{GraphAST, Stmt};
-use url::{ParseError, Url};
+use url::Url;
 
-use crate::constants;
+use crate::{constants, traits::ResultExtension};
 
 use super::args;
 
@@ -27,35 +27,25 @@ enum ActionType {
     RemoveSongs,
 }
 
-pub fn handle_plan_snapshot(cmd: &args::PlanCommand) {
-    create_execution_plan(cmd.id);
-    // let folder = format!("snapshots/{}", cmd.id);
-    // let error_msg = format!("expected to find snapshot folder: {}", folder);
-    //
-    // let found_files: Vec<_> = std::fs::read_dir(&folder).expect(&error_msg).collect();
-    //
-    // found_files
-    //     .iter()
-    //     .for_each(|dir| println!("Found: {:?}", dir));
-    //
-    // println!("Plan snapshot: {}", cmd.id);
+pub fn handle_plan_snapshot(cmd: &args::PlanCommand) -> Result<(), anyhow::Error> {
+    return create_execution_plan(cmd.id);
 }
 
-pub fn create_execution_plan(snapshot_id: u32) {
-    // Read the snapshot file by id and read the current state file if it exists
-    // Compare the two files and create a list of actions to perform
-    // Write the list of actions to a file
-    // Return the list of actions
-
+pub fn create_execution_plan(snapshot_id: u32) -> Result<(), anyhow::Error> {
     let directory_path = format!("snapshots/{}/", snapshot_id);
+    log::info!(
+        "checking directory: {} for *.edit.gv snapshot",
+        directory_path
+    );
+
     let data = std::fs::read_dir(&directory_path)
-        .expect(&format!(
-            "expected to find snapshot folder: {}",
+        .or_error(format!(
+            "failed to find snapshot folder: {}. Maybe it's another id?",
             directory_path
-        ))
+        ))?
         .map(|entry| {
             let path = entry.unwrap().path().canonicalize().unwrap();
-            println!("found path: {:?}", path);
+            log::info!("found: {}", directory_path);
             return path;
         })
         .filter(|path| path.is_file() && path.to_str().unwrap().ends_with("edit.gv"))
@@ -63,24 +53,22 @@ pub fn create_execution_plan(snapshot_id: u32) {
         .collect::<Vec<io::Result<String>>>();
 
     if data.len() == 0 {
-        panic!(
-            "{}",
-            format!("No *.edit.gv file found in {} folder", &directory_path)
-        );
+        return Err(anyhow::anyhow!(
+            "No *.edit.gv file found in {} folder",
+            &directory_path
+        ));
     }
 
     if data.len() > 1 {
-        panic!(
-            "{}",
-            format!(
-                "More than one *.edit.gv file found in {} folder. Expected only one since mixify doesn't know which one to use.",
-                &directory_path
-            )
-        );
+        return Err(anyhow::anyhow!(
+            "More than one *.edit.gv file found in {} folder. Expected only one since mixify doesn't know which one to use.",
+            &directory_path
+        ));
     }
 
     let content = data.first().unwrap().as_ref().unwrap();
-    let gv = graphviz_dot_parser::parse(&content).unwrap();
+    let gv =
+        graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
 
     let mixify_root_node = (
         constants::MIXIFY_TEMPORARY_ROOT_NODE_NAME.to_string(),
@@ -91,15 +79,13 @@ pub fn create_execution_plan(snapshot_id: u32) {
     let mut edges: Vec<EdgeData> = Vec::new();
     let mut root_nodes: Vec<String> = Vec::new();
 
-    if let Err(e) = validate_graph(&gv) {
-        panic!("{}", e);
-    }
-
     // NOTE: Important for this to work. All nodes must be defined in the graph. Otherwise it will panic.
     // In other words, edges that dont point to a node explicitly defined in the graph will cause a panic.
     // This is why we validate the graph before we do anything else.
+    validate_graph(&gv)?;
     let mut graph = gv.to_directed_graph().unwrap();
 
+    let mut error: Option<anyhow::Error> = None;
     gv.stmt.iter().for_each(|stmt| match stmt {
         Stmt::Edge(from, to, attrs) => {
             edges.push((from.to_string(), to.to_string(), attrs.clone()));
@@ -124,17 +110,17 @@ pub fn create_execution_plan(snapshot_id: u32) {
                     .find(|(k, _)| k == constants::URL_ATTRIBUTE_KEY);
 
                 if attr.is_none() {
-                    panic!(
+                    error = Some(anyhow!(
                         "Node {:?} is a base node and should have a spotify url attribute",
                         node
-                    );
+                    ));
+                } else {
+                    let (_, url) = attr.unwrap();
+                    let _ = Url::parse(url).expect(&format!(
+                        "the url attribute of {:?} is not a valid url",
+                        node
+                    ));
                 }
-
-                let (_, url) = attr.unwrap();
-                let _ = Url::parse(url).expect(&format!(
-                    "the url attribute of {:?} is not a valid url",
-                    node
-                ));
             }
 
             nodes.push((node.to_string(), attrs.clone()));
@@ -142,7 +128,11 @@ pub fn create_execution_plan(snapshot_id: u32) {
         _ => {}
     });
 
-    println!("root_nodes: {:?}", root_nodes);
+    if let Some(e) = error {
+        return Err(e);
+    }
+
+    log::debug!("nodes: {:?}", nodes);
 
     let root = constants::MIXIFY_TEMPORARY_ROOT_NODE_NAME.to_string();
     let idx = graph.add_node(root.clone());
@@ -160,12 +150,16 @@ pub fn create_execution_plan(snapshot_id: u32) {
 
     for actions in all_actions {
         for action in actions {
-            println!(
+            log::info!(
                 "{:?} from {} for/to {}",
-                action.action_type, action.node, action.for_node,
+                action.action_type,
+                action.node,
+                action.for_node,
             );
         }
     }
+
+    return Ok(());
 }
 
 fn create_node_execution_plan(

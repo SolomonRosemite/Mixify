@@ -15,6 +15,7 @@ rspotify = {version = "0.11.7", features = ["client-reqwest", "reqwest-native-tl
 tokio = { version = "1.31.0", features = ["full"] }
 env_logger = { version = "0.9.0", default-features = false }
 url = "2.4.0"
+log = "0.4.20"
 
 [dev-dependencies]
 tokio = "1.28.1"

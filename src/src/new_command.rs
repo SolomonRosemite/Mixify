@@ -1,7 +1,7 @@
 use super::args;
 use chrono::prelude::*;
 
-pub fn handle_new_snapshot(cmd: &args::NewCommand) {
+pub fn handle_new_snapshot(cmd: &args::NewCommand) -> Result<(), anyhow::Error> {
     std::fs::create_dir_all("snapshots/").unwrap();
     let found_dirs: Vec<_> = std::fs::read_dir("snapshots/").unwrap().collect();
 
@@ -54,4 +54,5 @@ digraph G {{
     std::fs::write(&file_name, content).expect(&file_err);
 
     println!("Created snapshot: {}!", &file_name);
+    return Ok(());
 }

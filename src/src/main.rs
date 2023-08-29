@@ -3,6 +3,7 @@ mod args;
 mod constants;
 mod new_command;
 mod plan_command;
+mod traits;
 
 use clap::Parser;
 use rspotify::{prelude::*, scopes, Credentials};
@@ -11,18 +12,27 @@ use crate::args::MixifyArgs;
 
 #[tokio::main]
 async fn main() {
-    let args = MixifyArgs::parse();
+    std::env::set_var("RUST_LOG", "debug");
+    env_logger::init();
 
-    match args.entity_type {
+    let args = MixifyArgs::parse();
+    let data = match args.entity_type {
         args::EntityType::New(cmd) => new_command::handle_new_snapshot(&cmd),
         args::EntityType::Plan(cmd) => plan_command::handle_plan_snapshot(&cmd),
         args::EntityType::Apply(cmd) => apply_command::handle_apply_snapshot(&cmd),
     };
 
+    match data {
+        Ok(_) => {
+            log::info!("Success!");
+        }
+        Err(e) => {
+            log::error!("Error: {}", e);
+        }
+    }
+
     return;
 
-    // TODO: Use logger instead of println?
-    env_logger::init();
     let creds = Credentials::from_env().unwrap();
     println!("{:?}", creds);
 
