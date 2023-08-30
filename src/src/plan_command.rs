@@ -1,6 +1,6 @@
 use std::{fs, io};
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Ok};
 use graphviz_dot_parser::types::{GraphAST, Stmt};
 use url::Url;
 
@@ -12,7 +12,7 @@ type EdgeData = (String, String, graphviz_dot_parser::types::Attributes);
 type NodeData = (String, graphviz_dot_parser::types::Attributes);
 
 #[derive(Debug)]
-struct Action {
+pub struct Action {
     action_type: ActionType,
     node: String,
     for_node: String,
@@ -28,45 +28,26 @@ enum ActionType {
 }
 
 pub fn handle_plan_snapshot(cmd: &args::PlanCommand) -> Result<(), anyhow::Error> {
-    return create_execution_plan(cmd.id);
+    let res = create_execution_plan(cmd.id)?;
+
+    for actions in res {
+        for action in actions {
+            log::info!(
+                "{:?} from {} for/to {}",
+                action.action_type,
+                action.node,
+                action.for_node,
+            );
+        }
+    }
+
+    return Ok(());
 }
 
-pub fn create_execution_plan(snapshot_id: u32) -> Result<(), anyhow::Error> {
-    let directory_path = format!("snapshots/{}/", snapshot_id);
-    log::info!(
-        "checking directory: {} for *.edit.gv snapshot",
-        directory_path
-    );
+pub fn create_execution_plan(snapshot_id: u32) -> Result<Vec<Vec<Action>>, anyhow::Error> {
+    let r = read_snapshot(snapshot_id, "edit")?;
 
-    let data = std::fs::read_dir(&directory_path)
-        .or_error(format!(
-            "failed to find snapshot folder: {}. Maybe it's another id?",
-            directory_path
-        ))?
-        .map(|entry| {
-            let path = entry.unwrap().path().canonicalize().unwrap();
-            log::info!("found: {}", directory_path);
-            return path;
-        })
-        .filter(|path| path.is_file() && path.to_str().unwrap().ends_with("edit.gv"))
-        .map(|file_path| fs::read_to_string(file_path))
-        .collect::<Vec<io::Result<String>>>();
-
-    if data.len() == 0 {
-        return Err(anyhow::anyhow!(
-            "No *.edit.gv file found in {} folder",
-            &directory_path
-        ));
-    }
-
-    if data.len() > 1 {
-        return Err(anyhow::anyhow!(
-            "More than one *.edit.gv file found in {} folder. Expected only one since mixify doesn't know which one to use.",
-            &directory_path
-        ));
-    }
-
-    let content = data.first().unwrap().as_ref().unwrap();
+    let content = r.first().unwrap().as_ref().unwrap();
     let gv =
         graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
 
@@ -148,18 +129,7 @@ pub fn create_execution_plan(snapshot_id: u32) -> Result<(), anyhow::Error> {
     let res = create_node_execution_plan(1, &root, &nodes, &edges, &graph);
     all_actions.push(res);
 
-    for actions in all_actions {
-        for action in actions {
-            log::info!(
-                "{:?} from {} for/to {}",
-                action.action_type,
-                action.node,
-                action.for_node,
-            );
-        }
-    }
-
-    return Ok(());
+    return Ok(all_actions);
 }
 
 fn create_node_execution_plan(
@@ -275,4 +245,46 @@ fn validate_graph(graph: &GraphAST) -> Result<(), anyhow::Error> {
     }
 
     return Ok(());
+}
+
+pub fn read_snapshot(id: u32, suffix: &str) -> Result<Vec<io::Result<String>>, anyhow::Error> {
+    let directory_path = format!("snapshots/{}/", id);
+    log::info!(
+        "checking directory: {} for *.{}.gv snapshot",
+        directory_path,
+        suffix
+    );
+
+    let full_suffix = format!("{}.gv", suffix);
+    let data = std::fs::read_dir(&directory_path)
+        .or_error(format!(
+            "failed to find snapshot folder: {}. Maybe it's another id?",
+            directory_path
+        ))?
+        .map(|entry| {
+            let path = entry.unwrap().path().canonicalize().unwrap();
+            log::info!("found: {}", directory_path);
+            return path;
+        })
+        .filter(|path| path.is_file() && path.to_str().unwrap().ends_with(full_suffix.as_str()))
+        .map(|file_path| fs::read_to_string(file_path))
+        .collect::<Vec<io::Result<String>>>();
+
+    if data.len() == 0 {
+        return Err(anyhow::anyhow!(
+            "No *.{}.gv file found in {} folder",
+            suffix,
+            &directory_path
+        ));
+    }
+
+    if data.len() > 1 {
+        return Err(anyhow::anyhow!(
+            "More than one *.{}.gv file found in {} folder. Expected only one since mixify doesn't know which one to use.",
+            suffix,
+            &directory_path
+        ));
+    }
+
+    return Ok(data);
 }
