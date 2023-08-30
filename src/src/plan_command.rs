@@ -13,16 +13,16 @@ type NodeData = (String, graphviz_dot_parser::types::Attributes);
 
 #[derive(Debug)]
 pub struct Action {
-    action_type: ActionType,
-    node: String,
-    for_node: String,
-    idx: usize,
+    pub action_type: ActionType,
+    pub node: String,
+    pub for_node: String,
+    pub idx: usize,
 }
 
 #[derive(Debug)]
-enum ActionType {
+pub enum ActionType {
     CreatePlaylist,
-    QuerySongsPlaylist,
+    QuerySongsPlaylist(String),
     CopySongs,
     RemoveSongs,
 }
@@ -189,16 +189,17 @@ fn create_node_execution_plan(
     }
 
     let (_, attr) = nodes.iter().find(|(name, _)| *name == *node).unwrap();
-    let playlist_already_exists = attr.iter().any(|(k, _)| k == constants::URL_ATTRIBUTE_KEY);
+    let playlist_already_exists = attr.iter().find(|(k, _)| k == constants::URL_ATTRIBUTE_KEY);
 
-    let action = Action {
-        action_type: ActionType::QuerySongsPlaylist,
-        node: node.clone(),
-        idx,
-        for_node: node.clone(),
-    };
-
-    if !playlist_already_exists {
+    let mut action: Option<Action> = None;
+    if let Some((_, url)) = playlist_already_exists {
+        action = Some(Action {
+            action_type: ActionType::QuerySongsPlaylist(url.clone()),
+            node: node.clone(),
+            idx,
+            for_node: node.clone(),
+        });
+    } else {
         actions.push(Action {
             action_type: ActionType::CreatePlaylist,
             node: node.clone(),
@@ -211,7 +212,10 @@ fn create_node_execution_plan(
         actions.push(action);
     }
 
-    actions.push(action);
+    if let Some(action) = action {
+        actions.push(action);
+    }
+
     return actions;
 }
 
