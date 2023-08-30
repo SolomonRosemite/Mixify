@@ -28,15 +28,17 @@ enum ActionType {
 }
 
 pub fn handle_plan_snapshot(cmd: &args::PlanCommand) -> Result<(), anyhow::Error> {
-    let res = create_execution_plan(cmd.id)?;
+    let gv = read_snapshot(cmd.id, "edit")?;
+    let res = create_execution_plan(&gv)?;
 
     for actions in res {
         for action in actions {
             log::info!(
-                "{:?} from {} for/to {}",
+                "{:?} from {} for/to {} and idx is {}",
                 action.action_type,
                 action.node,
                 action.for_node,
+                action.idx,
             );
         }
     }
@@ -44,13 +46,7 @@ pub fn handle_plan_snapshot(cmd: &args::PlanCommand) -> Result<(), anyhow::Error
     return Ok(());
 }
 
-pub fn create_execution_plan(snapshot_id: u32) -> Result<Vec<Vec<Action>>, anyhow::Error> {
-    let r = read_snapshot(snapshot_id, "edit")?;
-
-    let content = r.first().unwrap().as_ref().unwrap();
-    let gv =
-        graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
-
+pub fn create_execution_plan(gv: &GraphAST) -> Result<Vec<Vec<Action>>, anyhow::Error> {
     let mixify_root_node = (
         constants::MIXIFY_TEMPORARY_ROOT_NODE_NAME.to_string(),
         vec![],
@@ -247,7 +243,7 @@ fn validate_graph(graph: &GraphAST) -> Result<(), anyhow::Error> {
     return Ok(());
 }
 
-pub fn read_snapshot(id: u32, suffix: &str) -> Result<Vec<io::Result<String>>, anyhow::Error> {
+pub fn read_snapshot(id: u32, suffix: &str) -> Result<GraphAST, anyhow::Error> {
     let directory_path = format!("snapshots/{}/", id);
     log::info!(
         "checking directory: {} for *.{}.gv snapshot",
@@ -286,5 +282,9 @@ pub fn read_snapshot(id: u32, suffix: &str) -> Result<Vec<io::Result<String>>, a
         ));
     }
 
-    return Ok(data);
+    let content = data.first().unwrap().as_ref().unwrap();
+    let gv =
+        graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
+
+    return Ok(gv);
 }
