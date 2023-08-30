@@ -6,12 +6,16 @@ mod plan_command;
 mod traits;
 
 use clap::Parser;
-use rspotify::{prelude::*, scopes, Credentials};
+use rspotify::{prelude::*, scopes, AuthCodeSpotify, Credentials, OAuth};
 
 use crate::args::MixifyArgs;
 
 #[tokio::main]
 async fn main() {
+    // create_spotify_token().await;
+    // return;
+    let spotify = create_client_from_token();
+
     std::env::set_var("RUST_LOG", "debug");
     env_logger::init();
 
@@ -19,7 +23,7 @@ async fn main() {
     let data = match args.entity_type {
         args::EntityType::New(cmd) => new_command::handle_new_snapshot(&cmd),
         args::EntityType::Plan(cmd) => plan_command::handle_plan_snapshot(&cmd),
-        args::EntityType::Apply(cmd) => apply_command::handle_apply_snapshot(&cmd),
+        args::EntityType::Apply(cmd) => apply_command::handle_apply_snapshot(&cmd, &spotify).await,
     };
 
     match data {
@@ -30,18 +34,48 @@ async fn main() {
             log::error!("Error: {}", e);
         }
     }
+}
 
-    return;
-
+async fn create_spotify_token() {
     let creds = Credentials::from_env().unwrap();
     println!("{:?}", creds);
 
-    // let oauth = OAuth {
-    //     redirect_uri: "http://localhost:8080/callback".to_string(),
-    //     scopes: scopes!("playlist-read-private", "playlist-read-collaborative", "user-read-currently-playing", "user-read-playback-state", "user-library-read", "user-read-private"),
-    //     ..Default::default()
-    // };
-    // let spotify = AuthCodeSpotify::new(creds, oauth);
+    let oauth = OAuth {
+        redirect_uri: "http://localhost:8080/callback".to_string(),
+        scopes: scopes!(
+            "playlist-modify-public",
+            "playlist-modify-private",
+            "playlist-read-private",
+            "playlist-read-collaborative",
+            "user-read-currently-playing",
+            "user-read-playback-state",
+            "user-library-read",
+            "user-read-private"
+        ),
+        ..Default::default()
+    };
+    let spotify = AuthCodeSpotify::new(creds, oauth);
+
+    let url = spotify.get_authorize_url(true).unwrap();
+    spotify.prompt_for_token(&url).await.unwrap();
+
+    let token = spotify.get_token();
+    let idk = token.lock().await;
+    let mut x = idk.unwrap();
+    let y = x.take();
+    let z = y.unwrap().access_token;
+
+    println!("{:?}", z);
+
+    let user = spotify.me().await.expect("access token no longer valid???");
+    println!("{:?}", user);
+}
+
+fn create_client_from_token() -> AuthCodeSpotify {
+    // TODO: Read token from test_token
+    // dotenv::dotenv().ok();
+    // env::var("TEST_TOKEN").ok()?,
+
     let token_str = "";
     let token = rspotify::model::Token {
         access_token: token_str.to_string(),
@@ -58,20 +92,5 @@ async fn main() {
         ),
     };
 
-    let spotify = rspotify::AuthCodeSpotify::from_token(token);
-
-    // Obtaining the access token
-    // let url = spotify.get_authorize_url(true).unwrap();
-    // spotify.prompt_for_token(&url).await.unwrap();
-    //
-    // let token = spotify.get_token();
-    // let idk = token.lock().await;
-    // let mut x = idk.unwrap();
-    // let y = x.take();
-    // let z = y.unwrap().access_token;
-    //
-    // println!("{:?}", z);
-
-    let user = spotify.me().await.expect("access token no longer valid???");
-    println!("{:?}", user);
+    return rspotify::AuthCodeSpotify::from_token(token);
 }
