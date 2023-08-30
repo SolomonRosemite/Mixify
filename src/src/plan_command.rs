@@ -21,7 +21,7 @@ pub struct Action {
 
 #[derive(Debug)]
 enum ActionType {
-    CreateAndQueryPlaylist,
+    CreatePlaylist,
     QuerySongsPlaylist,
     CopySongs,
     RemoveSongs,
@@ -191,17 +191,21 @@ fn create_node_execution_plan(
     let (_, attr) = nodes.iter().find(|(name, _)| *name == *node).unwrap();
     let playlist_already_exists = attr.iter().any(|(k, _)| k == constants::URL_ATTRIBUTE_KEY);
 
-    let action_type = match playlist_already_exists {
-        true => ActionType::QuerySongsPlaylist,
-        false => ActionType::CreateAndQueryPlaylist,
-    };
-
     let action = Action {
-        action_type,
+        action_type: ActionType::QuerySongsPlaylist,
         node: node.clone(),
         idx,
         for_node: node.clone(),
     };
+
+    if !playlist_already_exists {
+        actions.push(Action {
+            action_type: ActionType::CreatePlaylist,
+            node: node.clone(),
+            idx,
+            for_node: node.clone(),
+        });
+    }
 
     for action in final_node_actions {
         actions.push(action);
