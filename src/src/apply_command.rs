@@ -45,9 +45,10 @@ pub async fn handle_apply_snapshot(
 
     for actions in all_actions {
         for action in actions {
-            if action.node == constants::MIXIFY_TEMPORARY_ROOT_NODE_NAME {
+            if action.for_node == constants::MIXIFY_TEMPORARY_ROOT_NODE_NAME {
                 continue;
             }
+
             match action.action_type {
                 plan_command::ActionType::CreatePlaylist => {
                     let playlist = spotify
@@ -109,24 +110,30 @@ pub async fn handle_apply_snapshot(
                         .tracks
                         .items
                         .into_iter()
-                        .map(|item| {
+                        .filter_map(|item| {
                             let item = item.track.or_error(format!(
                                 "could not work with a song from the playlist id of {}",
                                 playlist_id_str
-                            ))?;
+                            ));
 
-                            match item {
-                                rspotify::model::PlayableItem::Track(track) => Ok(track),
+                            if let Err(e) = item {
+                                log::warn!("{}", e);
+                                return None;
+                            }
+
+                            match item.unwrap() {
+                                rspotify::model::PlayableItem::Track(track) => Some(track),
                                 rspotify::model::PlayableItem::Episode(_) => {
-                                    return Err(anyhow::anyhow!(format!(
-                                        "Skipping episode {:?} from playlist {:?}",
-                                        item, playlist_id_str
-                                    )));
+                                    let msg = format!(
+                                        "Skipping episode from playlist {:?}",
+                                        playlist_id_str
+                                    );
+                                    log::warn!("{}", msg);
+
+                                    None
                                 }
                             }
                         })
-                        // TODO: We should not unwrap.
-                        .map(|t| t.unwrap())
                         .collect::<Vec<FullTrack>>();
 
                     map.insert(action.node, tracks);

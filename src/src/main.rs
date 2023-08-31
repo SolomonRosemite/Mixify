@@ -6,18 +6,23 @@ mod plan_command;
 mod traits;
 
 use clap::Parser;
+use dotenv::dotenv;
+// extern crate pretty_env_logger;
+// #[macro_use]
+// extern crate log;
 use rspotify::{prelude::*, scopes, AuthCodeSpotify, Credentials, OAuth};
 
 use crate::args::MixifyArgs;
 
 #[tokio::main]
 async fn main() {
+    dotenv().expect("Failed to load .env file");
+    pretty_env_logger::init();
+
     // create_spotify_token().await;
     // return;
-    let spotify = create_client_from_token();
 
-    std::env::set_var("RUST_LOG", "debug");
-    env_logger::init();
+    let spotify = create_client_from_token();
 
     let args = MixifyArgs::parse();
     let data = match args.entity_type {
@@ -38,7 +43,6 @@ async fn main() {
 
 async fn create_spotify_token() {
     let creds = Credentials::from_env().unwrap();
-    println!("{:?}", creds);
 
     let oauth = OAuth {
         redirect_uri: "http://localhost:8080/callback".to_string(),
@@ -64,19 +68,11 @@ async fn create_spotify_token() {
     let mut x = idk.unwrap();
     let y = x.take();
     let z = y.unwrap().access_token;
-
     println!("{:?}", z);
-
-    let user = spotify.me().await.expect("access token no longer valid???");
-    println!("{:?}", user);
 }
 
 fn create_client_from_token() -> AuthCodeSpotify {
-    // TODO: Read token from test_token
-    // dotenv::dotenv().ok();
-    // env::var("TEST_TOKEN").ok()?,
-
-    let token_str = "";
+    let token_str = std::env::var("TEST_TOKEN").expect("TEST_TOKEN not set");
     let token = rspotify::model::Token {
         access_token: token_str.to_string(),
         refresh_token: None,
