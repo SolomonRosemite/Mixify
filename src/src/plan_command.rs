@@ -28,7 +28,9 @@ pub enum ActionType {
 }
 
 pub fn handle_plan_snapshot(cmd: &args::PlanCommand) -> Result<(), anyhow::Error> {
-    let gv = read_snapshot(cmd.id, "edit")?;
+    let content = read_snapshot_file(cmd.id, "edit")?;
+    let gv =
+        graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
     let res = create_execution_plan(&gv)?;
 
     for actions in res {
@@ -251,29 +253,10 @@ fn validate_graph(graph: &GraphAST) -> Result<(), anyhow::Error> {
     return Ok(());
 }
 
-pub fn read_snapshot(id: u32, suffix: &str) -> Result<GraphAST, anyhow::Error> {
+pub fn read_snapshot_file(id: u32, suffix: &str) -> Result<String, anyhow::Error> {
+    let data = list_snapshot_content(id, suffix)?;
+
     let directory_path = format!("snapshots/{}/", id);
-    log::info!(
-        "checking directory: {} for *.{}.gv snapshot",
-        directory_path,
-        suffix
-    );
-
-    let full_suffix = format!("{}.gv", suffix);
-    let data = std::fs::read_dir(&directory_path)
-        .or_error(format!(
-            "failed to find snapshot folder: {}. Maybe it's another id?",
-            directory_path
-        ))?
-        .map(|entry| {
-            let path = entry.unwrap().path().canonicalize().unwrap();
-            log::info!("found: {}", directory_path);
-            return path;
-        })
-        .filter(|path| path.is_file() && path.to_str().unwrap().ends_with(full_suffix.as_str()))
-        .map(|file_path| fs::read_to_string(file_path))
-        .collect::<Vec<io::Result<String>>>();
-
     if data.len() == 0 {
         return Err(anyhow::anyhow!(
             "No *.{}.gv file found in {} folder",
@@ -290,9 +273,42 @@ pub fn read_snapshot(id: u32, suffix: &str) -> Result<GraphAST, anyhow::Error> {
         ));
     }
 
-    let content = data.first().unwrap().as_ref().unwrap();
-    let gv =
-        graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
+    let content = data.first().unwrap().as_ref().unwrap().clone();
+    return Ok(content);
+}
 
-    return Ok(gv);
+pub fn list_snapshot_content(
+    id: u32,
+    suffix: &str,
+) -> Result<Vec<io::Result<String>>, anyhow::Error> {
+    let full_suffix = format!("{}.gv", suffix);
+    let data = list_snapshot_files(id, suffix)?
+        .iter()
+        .filter(|path| path.is_file() && path.to_str().unwrap().ends_with(full_suffix.as_str()))
+        .map(|file_path| fs::read_to_string(file_path))
+        .collect::<Vec<io::Result<String>>>();
+
+    return Ok(data);
+}
+
+pub fn list_snapshot_files(
+    id: u32,
+    suffix: &str,
+) -> Result<Vec<std::path::PathBuf>, anyhow::Error> {
+    let directory_path = format!("snapshots/{}/", id);
+    log::info!(
+        "checking directory: {} for *.{}.gv snapshot",
+        directory_path,
+        suffix
+    );
+
+    let data = std::fs::read_dir(&directory_path)
+        .or_error(format!(
+            "failed to find snapshot folder: {}. Maybe it's another id?",
+            directory_path
+        ))?
+        .map(|entry| entry.unwrap().path().canonicalize().unwrap())
+        .collect::<Vec<std::path::PathBuf>>();
+
+    return Ok(data);
 }

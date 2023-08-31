@@ -17,12 +17,15 @@ pub async fn handle_apply_snapshot(
     cmd: &args::ApplyCommand,
     spotify: &AuthCodeSpotify,
 ) -> Result<(), anyhow::Error> {
-    let gv = plan_command::read_snapshot(cmd.id, "edit")?;
+    let content = plan_command::read_snapshot_file(cmd.id, "edit")?;
+    let gv =
+        graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
     let all_actions = plan_command::create_execution_plan(&gv)?;
 
     // TODO:For better performance, maybe create a list of tracks and use refs in the map like
     // let mut map: HashMap<String, Vec<&rspotify::model::FullTrack>> = HashMap::new();
 
+    let mut nodes_with_missing_playlists: Vec<String> = Vec::new();
     let mut map: HashMap<String, Vec<rspotify::model::FullTrack>> = HashMap::new();
     let mut node_to_playlist_id: HashMap<String, String> = HashMap::new();
 
@@ -63,6 +66,7 @@ pub async fn handle_apply_snapshot(
                         .or_error_str("failed to create playlist")?;
                     log::info!("Created playlist {:?}", playlist);
 
+                    nodes_with_missing_playlists.push(action.node.clone());
                     map.insert(action.node.clone(), vec![]);
                     node_to_playlist_id.insert(
                         action.node.clone(),
@@ -206,5 +210,76 @@ pub async fn handle_apply_snapshot(
         }
     }
 
+    log::info!("Successfully applied snapshot");
+
+    let r = plan_command::list_snapshot_files(cmd.id, "edit")?;
+    let path = r.get(0).unwrap().to_str().unwrap();
+    let pre_apply_path = path.replace("edit", "pre.apply");
+    let post_apply_path = path.replace("edit", "post.apply");
+
+    std::fs::rename(path, pre_apply_path)?;
+
+    let mut idx = 0;
+    let mut new_content = content.clone();
+
+    for (node, playlist_id) in &node_to_playlist_id {
+        if !nodes_with_missing_playlists.contains(node) {
+            continue;
+        }
+
+        let chars = node.chars().collect::<Vec<char>>();
+        let content_chars = content.chars().collect::<Vec<char>>();
+        for (i, l) in content_chars.iter().enumerate() {
+            if *l != chars[idx] {
+                idx = 0;
+                continue;
+            } else if idx != chars.len() - 1 {
+                idx += 1;
+                continue;
+            }
+
+            let s = content_chars
+                .iter()
+                .skip(i - node.len())
+                .take(node.len() + 1)
+                .collect::<String>();
+
+            let s = s.trim();
+
+            idx = 0;
+            if s != *node {
+                continue;
+            }
+
+            for (j, c) in content.chars().skip(i).enumerate() {
+                if c != '[' && c != ';' {
+                    continue;
+                }
+
+                let has_attr = c == '[';
+                let idxxx = match has_attr {
+                    true => i + j + 1,
+                    false => i + j,
+                };
+
+                let s = match has_attr {
+                    true => format!(
+                        "URL=\"https://open.spotify.com/playlist/{}\", ",
+                        playlist_id
+                    ),
+                    false => format!(
+                        " [URL=\"https://open.spotify.com/playlist/{}\"]",
+                        playlist_id
+                    ),
+                };
+
+                new_content.insert_str(idxxx, s.as_str());
+                break;
+            }
+            break;
+        }
+    }
+
+    std::fs::write(post_apply_path, new_content)?;
     return Ok(());
 }

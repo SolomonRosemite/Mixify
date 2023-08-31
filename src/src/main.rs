@@ -7,9 +7,6 @@ mod traits;
 
 use clap::Parser;
 use dotenv::dotenv;
-// extern crate pretty_env_logger;
-// #[macro_use]
-// extern crate log;
 use rspotify::{prelude::*, scopes, AuthCodeSpotify, Credentials, OAuth};
 
 use crate::args::MixifyArgs;
