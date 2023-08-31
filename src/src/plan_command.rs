@@ -19,6 +19,7 @@ pub struct Action {
     pub idx: usize,
 }
 
+// TODO: Add support for artist query.
 #[derive(Debug)]
 pub enum ActionType {
     CreatePlaylist,

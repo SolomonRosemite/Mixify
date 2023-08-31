@@ -1,6 +1,7 @@
 use super::args;
 use chrono::prelude::*;
 
+// TODO: New snapshot should work on top the latest snapshot.
 pub fn handle_new_snapshot(cmd: &args::NewCommand) -> Result<(), anyhow::Error> {
     std::fs::create_dir_all("snapshots/").unwrap();
     let found_dirs: Vec<_> = std::fs::read_dir("snapshots/").unwrap().collect();
