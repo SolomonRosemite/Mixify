@@ -16,6 +16,8 @@ tokio = { version = "1.31.0", features = ["full"] }
 env_logger = { version = "0.9.0", default-features = false }
 url = "2.4.0"
 log = "0.4.20"
+dotenv = "0.15.0"
+pretty_env_logger = "0.5.0"
 
 [dev-dependencies]
 tokio = "1.28.1"
