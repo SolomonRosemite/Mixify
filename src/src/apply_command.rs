@@ -62,7 +62,7 @@ pub async fn handle_apply_snapshot(
                     let playlist = spotify
                         .user_playlist_create(
                             user.id.as_ref(),
-                            format!("{}©", action.node).as_str(),
+                            format!("{}™", action.node).as_str(),
                             Some(false),
                             Some(false),
                             Some(description.as_str()),
@@ -205,18 +205,35 @@ pub async fn handle_apply_snapshot(
     let pre_apply_path = path.replace("edit", "pre.apply");
     let post_apply_path = path.replace("edit", "post.apply");
 
-    // std::fs::rename(path, pre_apply_path)?;
+    let new_content = create_post_apply_file(
+        &content,
+        &node_to_playlist_id,
+        &nodes_with_missing_playlists,
+        &spotify,
+    )
+    .await?;
 
+    std::fs::rename(path, pre_apply_path)?;
+    std::fs::write(post_apply_path, new_content)?;
+    return Ok(());
+}
+
+async fn create_post_apply_file(
+    content: &String,
+    node_to_playlist_id: &HashMap<String, String>,
+    nodes_with_missing_playlists: &Vec<String>,
+    spotify: &AuthCodeSpotify,
+) -> Result<String, anyhow::Error> {
     let mut idx = 0;
     let mut new_content = content.clone();
 
-    for (node, playlist_id) in &node_to_playlist_id {
+    for (node, playlist_id) in node_to_playlist_id {
         if !nodes_with_missing_playlists.contains(node) {
             continue;
         }
 
         let chars = node.chars().collect::<Vec<char>>();
-        let content_chars = content.chars().collect::<Vec<char>>();
+        let content_chars = new_content.chars().collect::<Vec<char>>();
         for (i, l) in content_chars.iter().enumerate() {
             if *l != chars[idx] {
                 idx = 0;
@@ -264,12 +281,21 @@ pub async fn handle_apply_snapshot(
                 new_content.insert_str(idxxx, s.as_str());
                 break;
             }
+
+            // TODO: Remove later
+            // let id = rspotify::model::PlaylistId::from_id(playlist_id.as_str().clone());
+            // let r = spotify.playlist_unfollow(id.unwrap()).await;
+
+            // match r {
+            //     Ok(_) => log::info!("removed playlist successfully"),
+            //     Err(_) => log::error!("did not remove playlist successfully"),
+            // }
+
             break;
         }
     }
 
-    std::fs::write(post_apply_path, new_content)?;
-    return Ok(());
+    Ok(new_content)
 }
 
 fn parse_id_from_playlist_id(playlist_id: &rspotify::model::PlaylistId) -> String {
