@@ -14,7 +14,11 @@ use crate::args::MixifyArgs;
 #[tokio::main]
 async fn main() {
     dotenv().expect("Failed to load .env file");
-    pretty_env_logger::init();
+
+    let mut builder = pretty_env_logger::env_logger::Builder::from_default_env();
+    builder.target(pretty_env_logger::env_logger::Target::Stdout);
+    builder.filter(Some("rspotify_http"), log::LevelFilter::Off);
+    builder.init();
 
     // create_spotify_token().await;
     let spotify = create_client_from_token();
