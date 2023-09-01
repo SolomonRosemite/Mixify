@@ -20,11 +20,11 @@ pub async fn handle_apply_snapshot(
     let content = plan_command::read_snapshot_file(cmd.id, "edit")?;
     let gv =
         graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
+    let graph = gv.to_directed_graph().unwrap();
     let all_actions = plan_command::create_execution_plan(&gv)?;
 
     // TODO:For better performance, maybe create a list of tracks and use refs in the map like
     // let mut map: HashMap<String, Vec<&rspotify::model::FullTrack>> = HashMap::new();
-
     let mut nodes_with_missing_playlists: Vec<String> = Vec::new();
     let mut map: HashMap<String, Vec<rspotify::model::FullTrack>> = HashMap::new();
     let mut node_to_playlist_id: HashMap<String, String> = HashMap::new();
@@ -36,13 +36,7 @@ pub async fn handle_apply_snapshot(
 
     for actions in &all_actions {
         for action in actions {
-            log::info!(
-                "{:?} from {} for/to {} and idx is {}",
-                action.action_type,
-                action.node,
-                action.for_node,
-                action.idx,
-            );
+            log::info!("{}", action,);
         }
     }
 
@@ -54,13 +48,24 @@ pub async fn handle_apply_snapshot(
 
             match action.action_type {
                 plan_command::ActionType::CreatePlaylist => {
+                    let node_index = graph
+                        .node_indices()
+                        .find(|i| graph[*i] == *action.node)
+                        .unwrap();
+                    let nei = graph.neighbors_directed(node_index, petgraph::Direction::Incoming);
+                    let names = nei.map(|i| graph[i].clone()).collect::<Vec<String>>();
+                    let description = format!(
+                        "Generated mixstack using mixify. This playlist consists of: {}",
+                        names.join(", ")
+                    );
+
                     let playlist = spotify
                         .user_playlist_create(
                             user.id.as_ref(),
-                            action.node.as_str(),
+                            format!("{}©", action.node).as_str(),
                             Some(false),
                             Some(false),
-                            Some("test"),
+                            Some(description.as_str()),
                         )
                         .await
                         .or_error_str("failed to create playlist")?;
@@ -68,16 +73,8 @@ pub async fn handle_apply_snapshot(
 
                     nodes_with_missing_playlists.push(action.node.clone());
                     map.insert(action.node.clone(), vec![]);
-                    node_to_playlist_id.insert(
-                        action.node.clone(),
-                        playlist
-                            .id
-                            .to_string()
-                            .split(":")
-                            .last()
-                            .unwrap()
-                            .to_string(),
-                    );
+                    node_to_playlist_id
+                        .insert(action.node.clone(), parse_id_from_playlist_id(&playlist.id));
                 }
                 plan_command::ActionType::QuerySongsPlaylist(url) => {
                     if let Some(_) = map.get(&action.node) {
@@ -93,18 +90,9 @@ pub async fn handle_apply_snapshot(
                             playlist_id_str
                         ))?;
 
-                    node_to_playlist_id.insert(
-                        action.node.clone(),
-                        playlist_id
-                            .to_string()
-                            .split(":")
-                            .last()
-                            .unwrap()
-                            .to_string(),
-                    );
+                    node_to_playlist_id
+                        .insert(action.node.clone(), parse_id_from_playlist_id(&playlist_id));
 
-                    // TODO: There is a field arg that can be passed, idk what it is.
-                    // If stuff fails, this might be the reason.
                     let playlist = spotify
                         .user_playlist(user.id.as_ref(), Some(playlist_id), None)
                         .await
@@ -212,12 +200,12 @@ pub async fn handle_apply_snapshot(
 
     log::info!("Successfully applied snapshot");
 
-    let r = plan_command::list_snapshot_files(cmd.id, "edit")?;
-    let path = r.get(0).unwrap().to_str().unwrap();
+    let paths = plan_command::list_snapshot_files(cmd.id, "edit")?;
+    let path = paths.get(0).unwrap().to_str().unwrap();
     let pre_apply_path = path.replace("edit", "pre.apply");
     let post_apply_path = path.replace("edit", "post.apply");
 
-    std::fs::rename(path, pre_apply_path)?;
+    // std::fs::rename(path, pre_apply_path)?;
 
     let mut idx = 0;
     let mut new_content = content.clone();
@@ -282,4 +270,13 @@ pub async fn handle_apply_snapshot(
 
     std::fs::write(post_apply_path, new_content)?;
     return Ok(());
+}
+
+fn parse_id_from_playlist_id(playlist_id: &rspotify::model::PlaylistId) -> String {
+    playlist_id
+        .to_string()
+        .split(":")
+        .last()
+        .unwrap()
+        .to_string()
 }

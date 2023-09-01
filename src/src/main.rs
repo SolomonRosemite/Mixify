@@ -17,8 +17,6 @@ async fn main() {
     pretty_env_logger::init();
 
     // create_spotify_token().await;
-    // return;
-
     let spotify = create_client_from_token();
 
     let args = MixifyArgs::parse();
@@ -66,6 +64,8 @@ async fn create_spotify_token() {
     let y = x.take();
     let z = y.unwrap().access_token;
     println!("{:?}", z);
+
+    std::env::set_var("TEST_TOKEN", z);
 }
 
 fn create_client_from_token() -> AuthCodeSpotify {
