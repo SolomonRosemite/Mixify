@@ -1,8 +1,25 @@
+use crate::plan_command;
+
 use super::args;
 use chrono::prelude::*;
 
-// TODO: New snapshot should work on top the latest snapshot.
 pub fn handle_new_snapshot(cmd: &args::NewCommand) -> Result<(), anyhow::Error> {
+    let (content, id) = get_latest_snapshot_or_default(cmd.name.clone())?;
+
+    let file_name = format!("snapshots/{}/{}_{}.edit.gv", id, id, cmd.name);
+    let snapshot_folder_name = format!("snapshots/{}/{}", id, id);
+
+    let file_err = format!("Failed to write to file: {}", file_name);
+    let folder_err = format!("Failed to create snapshot folder: {}", snapshot_folder_name);
+
+    std::fs::create_dir_all(format!("snapshots/{}", id)).expect(&folder_err);
+    std::fs::write(&file_name, content).expect(&file_err);
+
+    println!("Created snapshot: {}!", &file_name);
+    return Ok(());
+}
+
+fn get_latest_snapshot_or_default(name: String) -> Result<(String, u32), anyhow::Error> {
     std::fs::create_dir_all("snapshots/").unwrap();
     let found_dirs: Vec<_> = std::fs::read_dir("snapshots/").unwrap().collect();
 
@@ -15,20 +32,29 @@ pub fn handle_new_snapshot(cmd: &args::NewCommand) -> Result<(), anyhow::Error> 
         .filter_map(|x| x.ok()?.file_name().into_string().ok()?.parse::<u32>().ok())
         .max();
 
-    let new_id = match latest_id {
+    let content = match latest_id {
         Some(id) => {
-            println!("Latest snapshot id: {}", id);
-            id + 1
+            let c = plan_command::read_snapshot_file(id, "post.apply")?;
+            let now = Local::now();
+            let content = format!(
+                "// Name: {}
+// Created at: {}
+// -------------------------------
+{}",
+                name,
+                now.format("%Y-%m-%d %H:%M:%S"),
+                c,
+            );
+            return Ok((content, id + 1));
         }
-        None => {
-            println!("No snapshots found");
-            1
-        }
+        None => (default_snapshot(name)?, 1),
     };
 
+    return Ok(content);
+}
+
+fn default_snapshot(name: String) -> Result<String, anyhow::Error> {
     let now = Local::now();
-    let file_name = format!("snapshots/{}/{}_{}.edit.gv", new_id, new_id, cmd.name);
-    let snapshot_folder_name = format!("snapshots/{}/{}", new_id, new_id);
     let content = format!(
         "// Name: {}
 // Created at: {}
@@ -44,16 +70,9 @@ digraph G {{
     Lofi -> Test;
 }}
         ",
-        cmd.name,
+        name,
         now.format("%Y-%m-%d %H:%M:%S")
     );
 
-    let file_err = format!("Failed to write to file: {}", file_name);
-    let folder_err = format!("Failed to create snapshot folder: {}", snapshot_folder_name);
-
-    std::fs::create_dir_all(format!("snapshots/{}", new_id)).expect(&folder_err);
-    std::fs::write(&file_name, content).expect(&file_err);
-
-    println!("Created snapshot: {}!", &file_name);
-    return Ok(());
+    return Ok(content);
 }
