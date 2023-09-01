@@ -19,6 +19,16 @@ pub struct Action {
     pub idx: usize,
 }
 
+impl std::fmt::Display for Action {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{:?} from {} for/to {} and idx is {}",
+            self.action_type, self.node, self.for_node, self.idx
+        )
+    }
+}
+
 // TODO: Add support for artist query.
 #[derive(Debug)]
 pub enum ActionType {
@@ -36,13 +46,7 @@ pub fn handle_plan_snapshot(cmd: &args::PlanCommand) -> Result<(), anyhow::Error
 
     for actions in res {
         for action in actions {
-            log::info!(
-                "{:?} from {} for/to {} and idx is {}",
-                action.action_type,
-                action.node,
-                action.for_node,
-                action.idx,
-            );
+            log::info!("{}", action);
         }
     }
 
