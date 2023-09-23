@@ -21,6 +21,8 @@ async fn main() {
     builder.init();
 
     // create_spotify_token().await;
+    // return;
+
     let spotify = create_client_from_token();
 
     let args = MixifyArgs::parse();

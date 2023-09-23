@@ -17,6 +17,7 @@ pub struct Action {
     pub node: String,
     pub for_node: String,
     pub idx: usize,
+    pub playlist_url: Option<String>,
 }
 
 impl std::fmt::Display for Action {
@@ -33,7 +34,7 @@ impl std::fmt::Display for Action {
 #[derive(Debug)]
 pub enum ActionType {
     CreatePlaylist,
-    QuerySongsPlaylist(String),
+    QuerySongsAndSaveChanges(Option<String>),
     CopySongs,
     RemoveSongs,
 }
@@ -171,13 +172,21 @@ fn create_node_execution_plan(
             actions.push(action);
         }
 
-        let action = Action {
+        final_node_actions.push(Action {
             action_type: ActionType::CopySongs,
+            playlist_url: get_playlist_url(nodes, &n),
             node: n,
             idx,
             for_node: node.clone(),
-        };
-        final_node_actions.push(action);
+        });
+        let p = get_playlist_url(nodes, &node);
+        final_node_actions.push(Action {
+            action_type: ActionType::QuerySongsAndSaveChanges(p.clone()),
+            playlist_url: p,
+            node: node.clone(),
+            idx,
+            for_node: node.clone(),
+        });
     }
 
     for (n, _, _) in edges_with_subtraction {
@@ -191,6 +200,7 @@ fn create_node_execution_plan(
             node: n.clone(),
             idx,
             for_node: node.clone(),
+            playlist_url: get_playlist_url(nodes, n),
         };
         final_node_actions.push(action);
     }
@@ -201,10 +211,11 @@ fn create_node_execution_plan(
     let mut action: Option<Action> = None;
     if let Some((_, url)) = playlist_already_exists {
         action = Some(Action {
-            action_type: ActionType::QuerySongsPlaylist(url.clone()),
+            action_type: ActionType::QuerySongsAndSaveChanges(Some(url.clone())),
             node: node.clone(),
             idx,
             for_node: node.clone(),
+            playlist_url: Some(url.clone()),
         });
     } else {
         actions.push(Action {
@@ -212,6 +223,7 @@ fn create_node_execution_plan(
             node: node.clone(),
             idx,
             for_node: node.clone(),
+            playlist_url: None,
         });
     }
 
@@ -316,4 +328,12 @@ pub fn list_snapshot_files(
         .collect::<Vec<std::path::PathBuf>>();
 
     return Ok(data);
+}
+
+fn get_playlist_url(nodes: &Vec<NodeData>, node: &String) -> Option<String> {
+    let (_, attr) = nodes.iter().find(|(name, _)| *name == *node).unwrap();
+    return attr
+        .iter()
+        .find(|(k, _)| k == constants::URL_ATTRIBUTE_KEY)
+        .map(|(_, url)| url.clone());
 }

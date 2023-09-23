@@ -25,20 +25,35 @@ pub async fn handle_apply_snapshot(
 
     // TODO:For better performance, maybe create a list of tracks and use refs in the map like
     // let mut map: HashMap<String, Vec<&rspotify::model::FullTrack>> = HashMap::new();
-    let mut nodes_with_missing_playlists: Vec<String> = Vec::new();
     let mut map: HashMap<String, Vec<rspotify::model::FullTrack>> = HashMap::new();
     let mut node_to_playlist_id: HashMap<String, String> = HashMap::new();
+    let mut nodes_with_missing_playlists: Vec<String> = Vec::new();
 
     let user = spotify
         .current_user()
         .await
         .or_error_str("failed to fetch user")?;
 
+    log::info!("------------------");
+    log::info!("list of actions:");
     for actions in &all_actions {
         for action in actions {
-            log::info!("{}", action,);
+            log::info!("{}", action);
+
+            if map.get(&action.node).is_none() {
+                map.insert(action.node.clone(), vec![]);
+                map.insert(conv(&action.node.clone()), vec![]);
+
+                if let Some(url) = &action.playlist_url {
+                    let id = url.split("/").last().unwrap();
+                    node_to_playlist_id.insert(action.node.clone(), id.to_string());
+                } else {
+                    nodes_with_missing_playlists.push(action.node.clone());
+                }
+            }
         }
     }
+    log::info!("------------------");
 
     for actions in all_actions {
         for action in actions {
@@ -71,16 +86,26 @@ pub async fn handle_apply_snapshot(
                         .or_error_str("failed to create playlist")?;
                     log::info!("Created playlist {:?}", playlist);
 
-                    nodes_with_missing_playlists.push(action.node.clone());
-                    map.insert(action.node.clone(), vec![]);
                     node_to_playlist_id
                         .insert(action.node.clone(), parse_id_from_playlist_id(&playlist.id));
                 }
-                plan_command::ActionType::QuerySongsPlaylist(url) => {
-                    if let Some(_) = map.get(&action.node) {
-                        log::info!("Playlist {:?} already has tracks", action.node);
-                        continue;
+                plan_command::ActionType::QuerySongsAndSaveChanges(url) => {
+                    if let Some(songs) = map.get(&action.node) {
+                        // By default, the playlist should be empty.
+                        if songs.len() > 0 {
+                            log::warn!(
+                                "Playlist {:?} already has been queried. Skipping...",
+                                action.node
+                            );
+                            continue;
+                        }
                     }
+
+                    log::info!("Querying songs for playlist {:?}", action.node);
+
+                    let url = url
+                        .or_else(|| node_to_playlist_id.get(&action.node).cloned())
+                        .unwrap();
 
                     let playlist_id_str = url.split("/").last().unwrap();
                     let playlist_id = rspotify::model::PlaylistId::from_id(playlist_id_str.clone())
@@ -94,7 +119,7 @@ pub async fn handle_apply_snapshot(
                         .insert(action.node.clone(), parse_id_from_playlist_id(&playlist_id));
 
                     let playlist = spotify
-                        .user_playlist(user.id.as_ref(), Some(playlist_id), None)
+                        .user_playlist(user.id.as_ref(), Some(playlist_id.clone()), None)
                         .await
                         .or_error_str("failed to fetch playlist")?;
 
@@ -128,71 +153,86 @@ pub async fn handle_apply_snapshot(
                         })
                         .collect::<Vec<FullTrack>>();
 
-                    map.insert(action.node, tracks);
+                    let node_index = graph
+                        .node_indices()
+                        .find(|i| graph[*i] == *action.node)
+                        .unwrap();
+                    let nei = graph.neighbors_directed(node_index, petgraph::Direction::Incoming);
+
+                    if nei.count() == 0 {
+                        log::warn!(
+                            "Playlist {:?} has no incoming edges. Skipping...",
+                            action.node
+                        );
+                        map.insert(action.node, tracks);
+                        continue;
+                    }
+
+                    let new_playlist_songs = map.get(conv(&action.node).as_str()).unwrap();
+                    map.insert(action.node.clone(), new_playlist_songs.clone());
+
+                    let new_playlist_songs = map.get(conv(&action.node).as_str()).unwrap();
+                    let mut songs_to_remove = tracks.clone();
+                    songs_to_remove.retain(|t| !new_playlist_songs.contains(t));
+
+                    let mut songs_to_add = new_playlist_songs.clone();
+                    songs_to_add.retain(|t| !tracks.contains(t));
+
+                    if songs_to_add.len() != 0 {
+                        let ids = songs_to_add
+                            .iter()
+                            .map(|t| PlayableId::Track(t.id.clone().unwrap()))
+                            .collect::<Vec<rspotify::model::PlayableId>>();
+
+                        let res = spotify
+                            .playlist_add_items(playlist_id.clone(), ids, None)
+                            .await;
+                        if let Err(e) = res {
+                            return Err(anyhow::anyhow!("Failed to add songs to playlist {:?}", e));
+                        }
+
+                        log::info!("Added songs successfully");
+                    } else {
+                        log::info!("No songs to add to playlist {:?}", &playlist_id);
+                    }
+
+                    if songs_to_remove.len() != 0 {
+                        let ids = songs_to_remove
+                            .iter()
+                            .map(|t| PlayableId::Track(t.id.clone().unwrap()))
+                            .collect::<Vec<rspotify::model::PlayableId>>();
+
+                        log::info!("Removing songs to playlist {:?}", &playlist_id);
+                        let res = spotify
+                            .playlist_remove_all_occurrences_of_items(playlist_id, ids, None)
+                            .await;
+
+                        if let Err(e) = res {
+                            return Err(anyhow::anyhow!(
+                                "Failed to remove songs to playlist {:?}",
+                                e
+                            ));
+                        }
+
+                        log::info!("Removed songs successfully");
+                    } else {
+                        log::info!("No songs to remove to playlist {:?}", &playlist_id);
+                    }
                 }
                 plan_command::ActionType::CopySongs => {
-                    // NOTE: Again using refs would be better than cloning.
                     let tracks = map.get(&action.node).unwrap().clone();
-                    let target = map.get_mut(&action.for_node).unwrap();
-                    let playlist_id_str = node_to_playlist_id.get(&action.for_node).unwrap();
+                    let target = map
+                        .get_mut(conv(action.for_node.as_str()).as_str())
+                        .unwrap();
 
-                    let playlist_id = rspotify::model::PlaylistId::from_id(playlist_id_str)
-                        .or_error(format!(
-                            "failed to parse playlist id correctly from node {}. the parsed id {}",
-                            &action.node, playlist_id_str
-                        ))?;
-
-                    for t in &tracks {
+                    for t in tracks.iter() {
                         target.push(t.clone());
                     }
-
-                    let items = tracks
-                        .iter()
-                        .map(|t| PlayableId::Track(t.id.clone().unwrap()))
-                        .collect::<Vec<rspotify::model::PlayableId>>();
-
-                    log::info!("Adding songs to playlist {:?}", &playlist_id);
-                    let res = spotify.playlist_add_items(playlist_id, items, None).await;
-
-                    if let Err(e) = res {
-                        return Err(anyhow::anyhow!("Failed to add songs to playlist {:?}", e));
-                    }
-
-                    log::info!("Added songs successfully");
                 }
                 plan_command::ActionType::RemoveSongs => {
-                    // NOTE: Again using refs would be better than cloning.
                     let tracks = map.get(&action.node).unwrap().clone();
-                    let target = map.get_mut(&action.for_node).unwrap();
-                    let playlist_id_str = node_to_playlist_id.get(&action.for_node).unwrap();
-
-                    let playlist_id = rspotify::model::PlaylistId::from_id(playlist_id_str)
-                        .or_error(format!(
-                            "failed to parse playlist id correctly from node {}. the parsed id {}",
-                            &action.node, playlist_id_str
-                        ))?;
-
+                    let target = map.get_mut(conv(&action.for_node).as_str()).unwrap();
                     target.retain(|t| !tracks.contains(t));
-
-                    let songs_to_remove = tracks;
-                    let items = songs_to_remove
-                        .iter()
-                        .map(|t| PlayableId::Track(t.id.clone().unwrap()))
-                        .collect::<Vec<rspotify::model::PlayableId>>();
-
-                    log::info!("Removing songs to playlist {:?}", &playlist_id);
-                    let res = spotify
-                        .playlist_remove_all_occurrences_of_items(playlist_id, items, None)
-                        .await;
-
-                    if let Err(e) = res {
-                        return Err(anyhow::anyhow!(
-                            "Failed to remove songs to playlist {:?}",
-                            e
-                        ));
-                    }
-
-                    log::info!("Removed songs successfully");
                 }
             }
         }
@@ -213,8 +253,9 @@ pub async fn handle_apply_snapshot(
     )
     .await?;
 
-    std::fs::rename(path, pre_apply_path)?;
-    std::fs::write(post_apply_path, new_content)?;
+    // TODO: bring this back
+    // std::fs::rename(path, pre_apply_path)?;
+    // std::fs::write(post_apply_path, new_content)?;
     return Ok(());
 }
 
@@ -281,16 +322,6 @@ async fn create_post_apply_file(
                 new_content.insert_str(idxxx, s.as_str());
                 break;
             }
-
-            // TODO: Remove later
-            // let id = rspotify::model::PlaylistId::from_id(playlist_id.as_str().clone());
-            // let r = spotify.playlist_unfollow(id.unwrap()).await;
-
-            // match r {
-            //     Ok(_) => log::info!("removed playlist successfully"),
-            //     Err(_) => log::error!("did not remove playlist successfully"),
-            // }
-
             break;
         }
     }
@@ -305,4 +336,8 @@ fn parse_id_from_playlist_id(playlist_id: &rspotify::model::PlaylistId) -> Strin
         .last()
         .unwrap()
         .to_string()
+}
+
+fn conv(s: &str) -> String {
+    format!("local-{}", s)
 }

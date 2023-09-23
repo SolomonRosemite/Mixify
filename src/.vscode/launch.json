@@ -21,7 +21,7 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "mixify, apply 1",
+      "name": "mixify, apply 2",
       "cargo": {
         "args": ["build", "--bin=mixify", "--package=mixify"],
         "filter": {
@@ -29,7 +29,7 @@
           "kind": "bin"
         }
       },
-      "args": ["apply", "1"],
+      "args": ["apply", "2"],
       "cwd": "${workspaceFolder}"
     }
   ]
