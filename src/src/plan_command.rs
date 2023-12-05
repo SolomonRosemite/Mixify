@@ -151,14 +151,17 @@ pub fn create_execution_plan(gv: &GraphAST) -> Result<Vec<Vec<Action>>, anyhow::
 
 fn create_node_execution_plan(
     idx: usize,
-    node: &String,
+    current_node: &String,
     nodes: &Vec<NodeData>,
     edges: &Vec<EdgeData>,
     graph: &petgraph::Graph<String, ()>,
 ) -> Vec<Action> {
     let mut actions: Vec<Action> = Vec::new();
 
-    let node_index = graph.node_indices().find(|i| graph[*i] == *node).unwrap();
+    let node_index = graph
+        .node_indices()
+        .find(|i| graph[*i] == *current_node)
+        .unwrap();
     let nei = graph.neighbors_directed(node_index, petgraph::Direction::Incoming);
     let names = nei.map(|i| graph[i].clone()).collect::<Vec<String>>();
     let has_neighbors = names.len() > 0;
@@ -166,10 +169,10 @@ fn create_node_execution_plan(
     let mut edges_with_subtraction: Vec<&EdgeData> = Vec::new();
 
     let mut final_node_actions: Vec<Action> = Vec::new();
-    for n in &names {
+    for from_node in &names {
         let subtraction_edge = edges.iter().find(|(from, to, attr)| {
-            *from == *n
-                && *to == *node
+            *from == *from_node
+                && *to == *current_node
                 && attr
                     .iter()
                     .any(|(k, v)| k == constants::SUBTRACT_ATTRIBUTE_KEY && v == "true")
@@ -181,17 +184,17 @@ fn create_node_execution_plan(
             continue;
         }
 
-        let r = create_node_execution_plan(idx + 1, n, nodes, edges, graph);
+        let r = create_node_execution_plan(idx + 1, from_node, nodes, edges, graph);
         for action in r {
             actions.push(action);
         }
 
         final_node_actions.push(Action {
             action_type: ActionType::CopySongs,
-            playlist_url: get_playlist_url(nodes, n),
-            node: n.to_string(),
+            playlist_url: get_playlist_url(nodes, from_node),
+            node: from_node.to_string(),
             idx,
-            for_node: node.clone(),
+            for_node: current_node.clone(),
         });
     }
 
@@ -205,13 +208,16 @@ fn create_node_execution_plan(
             action_type: ActionType::RemoveSongs,
             node: n.clone(),
             idx,
-            for_node: node.clone(),
+            for_node: current_node.clone(),
             playlist_url: get_playlist_url(nodes, n),
         };
         final_node_actions.push(action);
     }
 
-    let (_, attr) = nodes.iter().find(|(name, _)| *name == *node).unwrap();
+    let (_, attr) = nodes
+        .iter()
+        .find(|(name, _)| *name == *current_node)
+        .unwrap();
     let playlist_already_exists = attr.iter().find(|(k, _)| k == constants::URL_ATTRIBUTE_KEY);
 
     if !has_neighbors {
@@ -222,35 +228,35 @@ fn create_node_execution_plan(
         // We always query because we want the latest state of the playlist.
         final_node_actions.push(Action {
             action_type: ActionType::QuerySongs(Some(url.clone())),
-            node: node.clone(),
+            node: current_node.clone(),
             idx,
-            for_node: node.clone(),
+            for_node: current_node.clone(),
             playlist_url: Some(url.clone()),
         });
 
         if has_neighbors {
             final_node_actions.push(Action {
                 action_type: ActionType::SaveChanges(Some(url.clone())),
-                node: node.clone(),
+                node: current_node.clone(),
                 idx,
-                for_node: node.clone(),
+                for_node: current_node.clone(),
                 playlist_url: Some(url.clone()),
             });
         }
     } else {
         actions.push(Action {
             action_type: ActionType::CreatePlaylist,
-            node: node.clone(),
+            node: current_node.clone(),
             idx,
-            for_node: node.clone(),
+            for_node: current_node.clone(),
             playlist_url: None,
         });
 
         final_node_actions.push(Action {
             action_type: ActionType::SaveChanges(None),
-            node: node.clone(),
+            node: current_node.clone(),
             idx,
-            for_node: node.clone(),
+            for_node: current_node.clone(),
             playlist_url: None,
         });
     }
