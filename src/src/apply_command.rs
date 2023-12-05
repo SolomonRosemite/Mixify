@@ -42,7 +42,7 @@ pub async fn handle_apply_snapshot(
 
             if map.get(&action.node).is_none() {
                 map.insert(action.node.clone(), vec![]);
-                map.insert(conv(&action.node.clone()), vec![]);
+                map.insert(to_local(&action.node.clone()), vec![]);
 
                 if let Some(url) = &action.playlist_url {
                     let id = url.split("/").last().unwrap();
@@ -90,11 +90,11 @@ pub async fn handle_apply_snapshot(
                         .insert(action.node.clone(), parse_id_from_playlist_id(&playlist.id));
                 }
                 plan_command::ActionType::QuerySongs(url) => {
-                    if let Some(songs) = map.get(&action.node) {
+                    if let Some(songs) = map.get(&to_local(&action.node)) {
                         // By default, the playlist should be empty.
                         if songs.len() > 0 {
                             log::warn!(
-                                "Playlist {:?} already has been queried. Skipping...",
+                                "Playlist {:?} already has been queried. This should never happen. Skipping...",
                                 action.node
                             );
                             continue;
@@ -159,24 +159,58 @@ pub async fn handle_apply_snapshot(
                         .unwrap();
                     let nei = graph.neighbors_directed(node_index, petgraph::Direction::Incoming);
 
-                    if nei.count() == 0 {
-                        log::warn!(
-                            "Playlist {:?} has no incoming edges. Skipping...",
-                            action.node
-                        );
-                        map.insert(action.node, tracks);
-                        continue;
+                    // TODO: This should never happen right?
+                    assert!(nei.count() == 0);
+                    // if nei.count() == 0 {
+                    //     log::warn!(
+                    //         "Playlist {:?} has no incoming edges. Skipping...",
+                    //         action.node
+                    //     );
+                    //     map.insert(action.node, tracks);
+                    //     continue;
+                    // }
+
+                    map.insert(action.node.clone(), tracks.clone());
+                    map.insert(to_local(&action.node), tracks);
+                }
+                plan_command::ActionType::CopySongs => {
+                    let tracks = map.get(&to_local(&action.node)).unwrap().clone();
+                    let target = map.get_mut(&to_local(&action.for_node)).unwrap();
+
+                    // TODO: Check for duplicates no?
+                    for t in tracks.iter() {
+                        target.push(t.clone());
                     }
+                }
+                // TODO: Implement...
+                plan_command::ActionType::RemoveSongs => {
+                    // let tracks = map.get(&action.node).unwrap().clone();
+                    // let target = map.get_mut(conv(&action.for_node).as_str()).unwrap();
+                    // target.retain(|t| !tracks.contains(t));
+                }
+                plan_command::ActionType::SaveChanges(_) => {
+                    // Songs from the user will be kept.
+                    // Songs from the bot will be removed.
 
-                    let new_playlist_songs = map.get(conv(&action.node).as_str()).unwrap();
-                    map.insert(action.node.clone(), new_playlist_songs.clone());
+                    // TODO: Have fun.
+                    // There is a chance that the user has removed a song from a child playlist
+                    // after it has sync with the parent playlist.
+                    // In that case, we need to remove the song from the parent (current, this playlist right here) as well.
 
-                    let new_playlist_songs = map.get(conv(&action.node).as_str()).unwrap();
-                    let mut songs_to_remove = tracks.clone();
-                    songs_to_remove.retain(|t| !new_playlist_songs.contains(t));
+                    let remote = map.get(&action.node).unwrap().clone();
+                    let local = map.get_mut(&to_local(&action.for_node)).unwrap();
 
-                    let mut songs_to_add = new_playlist_songs.clone();
-                    songs_to_add.retain(|t| !tracks.contains(t));
+                    // Because we dont have the logic yet to distinguish between user and bot songs added songs
+                    // We will just remove all the songs.
+
+                    // In this case that means we just override the remote playlist with the local one.
+                    let new_playlist_state = local;
+
+                    let mut songs_to_add = new_playlist_state.clone();
+                    songs_to_add.retain(|t| !remote.contains(t));
+
+                    let playlist_id = node_to_playlist_id.get(&action.node).unwrap();
+                    let playlist_id = rspotify::model::PlaylistId::from_id(playlist_id).unwrap();
 
                     if songs_to_add.len() != 0 {
                         let ids = songs_to_add
@@ -184,9 +218,7 @@ pub async fn handle_apply_snapshot(
                             .map(|t| PlayableId::Track(t.id.clone().unwrap()))
                             .collect::<Vec<rspotify::model::PlayableId>>();
 
-                        let res = spotify
-                            .playlist_add_items(playlist_id.clone(), ids, None)
-                            .await;
+                        let res = spotify.playlist_add_items(playlist_id, ids, None).await;
                         if let Err(e) = res {
                             return Err(anyhow::anyhow!("Failed to add songs to playlist {:?}", e));
                         }
@@ -196,48 +228,35 @@ pub async fn handle_apply_snapshot(
                         log::info!("No songs to add to playlist {:?}", &playlist_id);
                     }
 
-                    if songs_to_remove.len() != 0 {
-                        let ids = songs_to_remove
-                            .iter()
-                            .map(|t| PlayableId::Track(t.id.clone().unwrap()))
-                            .collect::<Vec<rspotify::model::PlayableId>>();
+                    // if songs_to_remove.len() != 0 {
+                    //     let ids = songs_to_remove
+                    //         .iter()
+                    //         .map(|t| PlayableId::Track(t.id.clone().unwrap()))
+                    //         .collect::<Vec<rspotify::model::PlayableId>>();
 
-                        log::info!("Removing songs to playlist {:?}", &playlist_id);
-                        let res = spotify
-                            .playlist_remove_all_occurrences_of_items(playlist_id, ids, None)
-                            .await;
+                    //     log::info!("Removing songs to playlist {:?}", &playlist_id);
+                    //     let res = spotify
+                    //         .playlist_remove_all_occurrences_of_items(playlist_id, ids, None)
+                    //         .await;
 
-                        if let Err(e) = res {
-                            return Err(anyhow::anyhow!(
-                                "Failed to remove songs to playlist {:?}",
-                                e
-                            ));
-                        }
+                    //     if let Err(e) = res {
+                    //         return Err(anyhow::anyhow!(
+                    //             "Failed to remove songs to playlist {:?}",
+                    //             e
+                    //         ));
+                    //     }
 
-                        log::info!("Removed songs successfully");
-                    } else {
-                        log::info!("No songs to remove to playlist {:?}", &playlist_id);
-                    }
-                }
-                plan_command::ActionType::CopySongs => {
-                    let tracks = map.get(&action.node).unwrap().clone();
-                    let target = map
-                        .get_mut(conv(action.for_node.as_str()).as_str())
-                        .unwrap();
+                    //     log::info!("Removed songs successfully");
+                    // } else {
+                    //     log::info!("No songs to remove to playlist {:?}", &playlist_id);
+                    // }
 
-                    for t in tracks.iter() {
-                        target.push(t.clone());
-                    }
-                }
-                plan_command::ActionType::RemoveSongs => {
-                    let tracks = map.get(&action.node).unwrap().clone();
-                    let target = map.get_mut(conv(&action.for_node).as_str()).unwrap();
-                    target.retain(|t| !tracks.contains(t));
-                }
-                plan_command::ActionType::SaveChanges(_) => {
-                    // let tracks = map.get(&action.node).unwrap().clone();
-                    // let target = map.get_mut(conv(&action.for_node).as_str()).unwrap();
-                    // *target = tracks;
+                    // Set the updated playlist state.
+                    let state = new_playlist_state.clone();
+                    map.insert(to_local(&action.node), state);
+
+                    // Remove because we dont need it anymore. Also prevent accidental usage.
+                    map.remove(&action.node);
                 }
             }
         }
@@ -343,6 +362,6 @@ fn parse_id_from_playlist_id(playlist_id: &rspotify::model::PlaylistId) -> Strin
         .to_string()
 }
 
-fn conv(s: &str) -> String {
+fn to_local(s: &str) -> String {
     format!("local-{}", s)
 }
