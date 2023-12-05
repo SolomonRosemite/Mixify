@@ -36,13 +36,13 @@ pub enum ActionType {
     CreatePlaylist,
     QuerySongs(Option<String>),
 
-    // SaveChanges is responsible for also saving the state locally.
+    /// SaveChanges is responsible for also saving the state locally.
     SaveChanges(Option<String>),
     CopySongs,
 
-    // RemoveSongs should only remove songs not added by the user. Only be the bot.
-    // There is also a chance that song from a child playlist was added by a user.
-    // In that case we should not remove it. (No idea how to do that yet)
+    /// RemoveSongs should only remove songs not added by the user. Only be the bot.
+    /// There is also a chance that song from a child playlist was added by a user.
+    /// In that case we should not remove it. (No idea how to do that yet)
     RemoveSongs,
 }
 
