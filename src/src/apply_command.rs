@@ -89,7 +89,7 @@ pub async fn handle_apply_snapshot(
                     node_to_playlist_id
                         .insert(action.node.clone(), parse_id_from_playlist_id(&playlist.id));
                 }
-                plan_command::ActionType::QuerySongsAndSaveChanges(url) => {
+                plan_command::ActionType::QuerySongs(url) => {
                     if let Some(songs) = map.get(&action.node) {
                         // By default, the playlist should be empty.
                         if songs.len() > 0 {
@@ -233,6 +233,11 @@ pub async fn handle_apply_snapshot(
                     let tracks = map.get(&action.node).unwrap().clone();
                     let target = map.get_mut(conv(&action.for_node).as_str()).unwrap();
                     target.retain(|t| !tracks.contains(t));
+                }
+                plan_command::ActionType::SaveChanges(_) => {
+                    // let tracks = map.get(&action.node).unwrap().clone();
+                    // let target = map.get_mut(conv(&action.for_node).as_str()).unwrap();
+                    // *target = tracks;
                 }
             }
         }
