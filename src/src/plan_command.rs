@@ -34,8 +34,15 @@ impl std::fmt::Display for Action {
 #[derive(Debug)]
 pub enum ActionType {
     CreatePlaylist,
-    QuerySongsAndSaveChanges(Option<String>),
+    QuerySongs(Option<String>),
+
+    /// SaveChanges is responsible for also saving the state locally.
+    SaveChanges(Option<String>),
     CopySongs,
+
+    /// RemoveSongs should only remove songs not added by the user. Only be the bot.
+    /// There is also a chance that song from a child playlist was added by a user.
+    /// In that case we should not remove it. (No idea how to do that yet)
     RemoveSongs,
 }
 
@@ -43,10 +50,16 @@ pub fn handle_plan_snapshot(cmd: &args::PlanCommand) -> Result<(), anyhow::Error
     let content = read_snapshot_file(cmd.id, "edit")?;
     let gv =
         graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
-    let res = create_execution_plan(&gv)?;
+    let (res, _) = create_execution_plan(&gv)?;
 
     for actions in res {
+        let mut idx = 0;
         for action in actions {
+            if idx != action.idx {
+                log::info!("------------------------------------");
+                idx = action.idx;
+            }
+
             log::info!("{}", action);
         }
     }
@@ -54,7 +67,9 @@ pub fn handle_plan_snapshot(cmd: &args::PlanCommand) -> Result<(), anyhow::Error
     return Ok(());
 }
 
-pub fn create_execution_plan(gv: &GraphAST) -> Result<Vec<Vec<Action>>, anyhow::Error> {
+pub fn create_execution_plan(
+    gv: &GraphAST,
+) -> Result<(Vec<Vec<Action>>, Vec<NodeData>), anyhow::Error> {
     let mixify_root_node = (
         constants::MIXIFY_TEMPORARY_ROOT_NODE_NAME.to_string(),
         vec![],
@@ -133,29 +148,33 @@ pub fn create_execution_plan(gv: &GraphAST) -> Result<Vec<Vec<Action>>, anyhow::
     let res = create_node_execution_plan(1, &root, &nodes, &edges, &graph);
     all_actions.push(res);
 
-    return Ok(all_actions);
+    return Ok((all_actions, nodes.clone()));
 }
 
 fn create_node_execution_plan(
     idx: usize,
-    node: &String,
+    current_node: &String,
     nodes: &Vec<NodeData>,
     edges: &Vec<EdgeData>,
     graph: &petgraph::Graph<String, ()>,
 ) -> Vec<Action> {
     let mut actions: Vec<Action> = Vec::new();
 
-    let node_index = graph.node_indices().find(|i| graph[*i] == *node).unwrap();
+    let node_index = graph
+        .node_indices()
+        .find(|i| graph[*i] == *current_node)
+        .unwrap();
     let nei = graph.neighbors_directed(node_index, petgraph::Direction::Incoming);
     let names = nei.map(|i| graph[i].clone()).collect::<Vec<String>>();
+    let has_neighbors = names.len() > 0;
 
     let mut edges_with_subtraction: Vec<&EdgeData> = Vec::new();
 
     let mut final_node_actions: Vec<Action> = Vec::new();
-    for n in names {
+    for from_node in &names {
         let subtraction_edge = edges.iter().find(|(from, to, attr)| {
-            *from == *n
-                && *to == *node
+            *from == *from_node
+                && *to == *current_node
                 && attr
                     .iter()
                     .any(|(k, v)| k == constants::SUBTRACT_ATTRIBUTE_KEY && v == "true")
@@ -167,25 +186,17 @@ fn create_node_execution_plan(
             continue;
         }
 
-        let r = create_node_execution_plan(idx + 1, &n, nodes, edges, graph);
+        let r = create_node_execution_plan(idx + 1, from_node, nodes, edges, graph);
         for action in r {
             actions.push(action);
         }
 
         final_node_actions.push(Action {
             action_type: ActionType::CopySongs,
-            playlist_url: get_playlist_url(nodes, &n),
-            node: n,
+            playlist_url: get_playlist_url(nodes, from_node),
+            node: from_node.to_string(),
             idx,
-            for_node: node.clone(),
-        });
-        let p = get_playlist_url(nodes, &node);
-        final_node_actions.push(Action {
-            action_type: ActionType::QuerySongsAndSaveChanges(p.clone()),
-            playlist_url: p,
-            node: node.clone(),
-            idx,
-            for_node: node.clone(),
+            for_node: current_node.clone(),
         });
     }
 
@@ -199,39 +210,60 @@ fn create_node_execution_plan(
             action_type: ActionType::RemoveSongs,
             node: n.clone(),
             idx,
-            for_node: node.clone(),
+            for_node: current_node.clone(),
             playlist_url: get_playlist_url(nodes, n),
         };
         final_node_actions.push(action);
     }
 
-    let (_, attr) = nodes.iter().find(|(name, _)| *name == *node).unwrap();
+    let (_, attr) = nodes
+        .iter()
+        .find(|(name, _)| *name == *current_node)
+        .unwrap();
     let playlist_already_exists = attr.iter().find(|(k, _)| k == constants::URL_ATTRIBUTE_KEY);
 
-    let mut action: Option<Action> = None;
+    if !has_neighbors {
+        assert!(playlist_already_exists.is_some());
+    }
+
     if let Some((_, url)) = playlist_already_exists {
-        action = Some(Action {
-            action_type: ActionType::QuerySongsAndSaveChanges(Some(url.clone())),
-            node: node.clone(),
+        // We always query because we want the latest state of the playlist.
+        final_node_actions.push(Action {
+            action_type: ActionType::QuerySongs(Some(url.clone())),
+            node: current_node.clone(),
             idx,
-            for_node: node.clone(),
+            for_node: current_node.clone(),
             playlist_url: Some(url.clone()),
         });
+
+        if has_neighbors {
+            final_node_actions.push(Action {
+                action_type: ActionType::SaveChanges(Some(url.clone())),
+                node: current_node.clone(),
+                idx,
+                for_node: current_node.clone(),
+                playlist_url: Some(url.clone()),
+            });
+        }
     } else {
         actions.push(Action {
             action_type: ActionType::CreatePlaylist,
-            node: node.clone(),
+            node: current_node.clone(),
             idx,
-            for_node: node.clone(),
+            for_node: current_node.clone(),
+            playlist_url: None,
+        });
+
+        final_node_actions.push(Action {
+            action_type: ActionType::SaveChanges(None),
+            node: current_node.clone(),
+            idx,
+            for_node: current_node.clone(),
             playlist_url: None,
         });
     }
 
     for action in final_node_actions {
-        actions.push(action);
-    }
-
-    if let Some(action) = action {
         actions.push(action);
     }
 

@@ -21,7 +21,7 @@ pub async fn handle_apply_snapshot(
     let gv =
         graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
     let graph = gv.to_directed_graph().unwrap();
-    let all_actions = plan_command::create_execution_plan(&gv)?;
+    let (all_actions, nodes) = plan_command::create_execution_plan(&gv)?;
 
     // TODO:For better performance, maybe create a list of tracks and use refs in the map like
     // let mut map: HashMap<String, Vec<&rspotify::model::FullTrack>> = HashMap::new();
@@ -42,7 +42,7 @@ pub async fn handle_apply_snapshot(
 
             if map.get(&action.node).is_none() {
                 map.insert(action.node.clone(), vec![]);
-                map.insert(conv(&action.node.clone()), vec![]);
+                map.insert(to_local(&action.node.clone()), vec![]);
 
                 if let Some(url) = &action.playlist_url {
                     let id = url.split("/").last().unwrap();
@@ -70,17 +70,31 @@ pub async fn handle_apply_snapshot(
                     let nei = graph.neighbors_directed(node_index, petgraph::Direction::Incoming);
                     let names = nei.map(|i| graph[i].clone()).collect::<Vec<String>>();
                     let description = format!(
-                        "Generated mixstack using mixify. This playlist consists of: {}",
+                        "Generated mixstack using mixify. This playlist consists of: {}.",
                         names.join(", ")
                     );
 
+                    let (_, attr) = nodes
+                        .iter()
+                        .find(|(name, _)| *name == *action.node)
+                        .unwrap();
+
+                    let playlist_name_attr = attr
+                        .iter()
+                        .find(|(k, _)| k == constants::LABEL_ATTRIBUTE_KEY);
+
+                    let mut playlist_name = action.node.clone();
+                    if let Some((_, v)) = playlist_name_attr {
+                        playlist_name = v.clone();
+                    }
+
                     let playlist = spotify
                         .user_playlist_create(
-                            user.id.as_ref(),
-                            format!("{}™", action.node).as_str(),
+                            user.id.clone(),
+                            &format!("{}™", playlist_name),
                             Some(false),
                             Some(false),
-                            Some(description.as_str()),
+                            Some(&description),
                         )
                         .await
                         .or_error_str("failed to create playlist")?;
@@ -89,12 +103,12 @@ pub async fn handle_apply_snapshot(
                     node_to_playlist_id
                         .insert(action.node.clone(), parse_id_from_playlist_id(&playlist.id));
                 }
-                plan_command::ActionType::QuerySongsAndSaveChanges(url) => {
+                plan_command::ActionType::QuerySongs(url) => {
                     if let Some(songs) = map.get(&action.node) {
                         // By default, the playlist should be empty.
                         if songs.len() > 0 {
                             log::warn!(
-                                "Playlist {:?} already has been queried. Skipping...",
+                                "Playlist {:?} already has been queried. This should never happen. Skipping...",
                                 action.node
                             );
                             continue;
@@ -153,30 +167,43 @@ pub async fn handle_apply_snapshot(
                         })
                         .collect::<Vec<FullTrack>>();
 
-                    let node_index = graph
-                        .node_indices()
-                        .find(|i| graph[*i] == *action.node)
-                        .unwrap();
-                    let nei = graph.neighbors_directed(node_index, petgraph::Direction::Incoming);
+                    map.insert(action.node.clone(), tracks.clone());
 
-                    if nei.count() == 0 {
-                        log::warn!(
-                            "Playlist {:?} has no incoming edges. Skipping...",
-                            action.node
-                        );
-                        map.insert(action.node, tracks);
-                        continue;
+                    let has_songs = map.get(&to_local(&action.node)).unwrap().len() > 0;
+                    if !has_songs {
+                        map.insert(to_local(&action.node), tracks.clone());
                     }
+                }
+                plan_command::ActionType::CopySongs => {
+                    let tracks = map.get(&to_local(&action.node)).unwrap().clone();
+                    let target = map.get_mut(&to_local(&action.for_node)).unwrap();
 
-                    let new_playlist_songs = map.get(conv(&action.node).as_str()).unwrap();
-                    map.insert(action.node.clone(), new_playlist_songs.clone());
+                    for t in &tracks {
+                        if target.contains(t) {
+                            continue;
+                        }
 
-                    let new_playlist_songs = map.get(conv(&action.node).as_str()).unwrap();
-                    let mut songs_to_remove = tracks.clone();
-                    songs_to_remove.retain(|t| !new_playlist_songs.contains(t));
+                        target.push(t.clone());
+                    }
+                }
+                // We dont care if the song was added by the user or the bot we remove it anyway.
+                plan_command::ActionType::RemoveSongs => {
+                    let remote = map.get(&action.node).unwrap().clone();
+                    let local = map.get_mut(&to_local(&action.for_node)).unwrap();
+                    local.retain(|t| !remote.contains(t));
+                }
+                plan_command::ActionType::SaveChanges(_) => {
+                    let remote = map.get(&action.node).unwrap().clone();
+                    let local = map.get_mut(&to_local(&action.for_node)).unwrap();
 
-                    let mut songs_to_add = new_playlist_songs.clone();
-                    songs_to_add.retain(|t| !tracks.contains(t));
+                    let mut songs_to_add = local.clone();
+                    songs_to_add.retain(|t| !remote.contains(t));
+
+                    let mut songs_to_remove = remote.clone();
+                    songs_to_remove.retain(|t| !local.contains(t));
+
+                    let playlist_id = node_to_playlist_id.get(&action.node).unwrap();
+                    let playlist_id = rspotify::model::PlaylistId::from_id(playlist_id).unwrap();
 
                     if songs_to_add.len() != 0 {
                         let ids = songs_to_add
@@ -218,21 +245,10 @@ pub async fn handle_apply_snapshot(
                     } else {
                         log::info!("No songs to remove to playlist {:?}", &playlist_id);
                     }
-                }
-                plan_command::ActionType::CopySongs => {
-                    let tracks = map.get(&action.node).unwrap().clone();
-                    let target = map
-                        .get_mut(conv(action.for_node.as_str()).as_str())
-                        .unwrap();
 
-                    for t in tracks.iter() {
-                        target.push(t.clone());
-                    }
-                }
-                plan_command::ActionType::RemoveSongs => {
-                    let tracks = map.get(&action.node).unwrap().clone();
-                    let target = map.get_mut(conv(&action.for_node).as_str()).unwrap();
-                    target.retain(|t| !tracks.contains(t));
+                    // Set the updated playlist state.
+                    let state = local.clone();
+                    map.insert(to_local(&action.node), state);
                 }
             }
         }
@@ -249,84 +265,83 @@ pub async fn handle_apply_snapshot(
         &content,
         &node_to_playlist_id,
         &nodes_with_missing_playlists,
-        &spotify,
-    )
-    .await?;
+    )?;
 
-    // TODO: bring this back
-    // std::fs::rename(path, pre_apply_path)?;
-    // std::fs::write(post_apply_path, new_content)?;
+    std::fs::rename(path, pre_apply_path)?;
+    std::fs::write(post_apply_path, new_content)?;
     return Ok(());
 }
 
-async fn create_post_apply_file(
+pub fn create_post_apply_file(
     content: &String,
-    node_to_playlist_id: &HashMap<String, String>,
+    node_to_playlist_url: &HashMap<String, String>,
     nodes_with_missing_playlists: &Vec<String>,
-    spotify: &AuthCodeSpotify,
 ) -> Result<String, anyhow::Error> {
-    let mut idx = 0;
-    let mut new_content = content.clone();
+    let parts = content
+        .split(";")
+        .map(|part| part.to_string())
+        .collect::<Vec<String>>();
 
-    for (node, playlist_id) in node_to_playlist_id {
+    let mut res_parts = parts.clone();
+    for (node, playlist_url) in node_to_playlist_url {
         if !nodes_with_missing_playlists.contains(node) {
             continue;
         }
 
-        let chars = node.chars().collect::<Vec<char>>();
-        let content_chars = new_content.chars().collect::<Vec<char>>();
-        for (i, l) in content_chars.iter().enumerate() {
-            if *l != chars[idx] {
-                idx = 0;
-                continue;
-            } else if idx != chars.len() - 1 {
-                idx += 1;
+        let mut item: Option<(usize, usize, String)> = None;
+        for (idx, part) in parts.iter().enumerate() {
+            if part.contains("->") {
                 continue;
             }
 
-            let s = content_chars
-                .iter()
-                .skip(i - node.len())
-                .take(node.len() + 1)
-                .collect::<String>();
+            let trimmed = part.trim_matches(|c| c == ' ' || c == '\n');
+            let node_with_quotes = format!("\"{}\"", node);
 
-            let s = s.trim();
+            if trimmed.starts_with(node) || trimmed.starts_with(&node_with_quotes) {
+                part.chars().enumerate().for_each(|(i, c)| {
+                    if c != '[' || item.is_some() {
+                        return;
+                    }
 
-            idx = 0;
-            if s != *node {
-                continue;
-            }
+                    let mut end = ", ";
+                    if !part.contains("]") {
+                        end = "]";
+                    }
 
-            for (j, c) in content.chars().skip(i).enumerate() {
-                if c != '[' && c != ';' {
-                    continue;
+                    let s = format!(
+                        "URL=\"https://open.spotify.com/playlist/{}\"{}",
+                        playlist_url, end,
+                    );
+                    item = Some((idx, i + 1, s));
+                });
+
+                if item.is_none() {
+                    item = Some((
+                        idx,
+                        part.len(),
+                        format!(
+                            " [URL=\"https://open.spotify.com/playlist/{}\"]",
+                            playlist_url
+                        ),
+                    ));
                 }
-
-                let has_attr = c == '[';
-                let idxxx = match has_attr {
-                    true => i + j + 1,
-                    false => i + j,
-                };
-
-                let s = match has_attr {
-                    true => format!(
-                        "URL=\"https://open.spotify.com/playlist/{}\", ",
-                        playlist_id
-                    ),
-                    false => format!(
-                        " [URL=\"https://open.spotify.com/playlist/{}\"]",
-                        playlist_id
-                    ),
-                };
-
-                new_content.insert_str(idxxx, s.as_str());
-                break;
             }
-            break;
+        }
+
+        if let Some(item) = item {
+            let (idx, i, s) = item;
+            res_parts[idx].insert_str(i, &s);
+
+            log::info!("Successfully added playlist url to node {:?}", node);
+        } else {
+            log::error!(
+                "Could not find node {:?} in the graph and could not add the playlist url to it",
+                node
+            );
         }
     }
 
-    Ok(new_content)
+    return Ok(res_parts.join(";"));
 }
 
 fn parse_id_from_playlist_id(playlist_id: &rspotify::model::PlaylistId) -> String {
@@ -338,6 +353,6 @@ fn parse_id_from_playlist_id(playlist_id: &rspotify::model::PlaylistId) -> Strin
         .to_string()
 }
 
-fn conv(s: &str) -> String {
+fn to_local(s: &str) -> String {
     format!("local-{}", s)
 }
