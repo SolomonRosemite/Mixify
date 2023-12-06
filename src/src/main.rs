@@ -4,6 +4,7 @@ mod constants;
 mod new_command;
 mod plan_command;
 mod traits;
+mod types;
 
 use clap::Parser;
 use dotenv::dotenv;

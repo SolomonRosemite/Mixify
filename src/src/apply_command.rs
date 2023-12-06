@@ -9,6 +9,7 @@ use rspotify::{
 use crate::{
     constants, plan_command,
     traits::{OptionExtension, ResultExtension},
+    types,
 };
 
 use super::args;
@@ -63,7 +64,7 @@ pub async fn handle_apply_snapshot(
             }
 
             match action.action_type {
-                plan_command::ActionType::CreatePlaylist => {
+                types::ActionType::CreatePlaylist => {
                     let node_index = graph
                         .node_indices()
                         .find(|i| graph[*i] == *action.node)
@@ -104,7 +105,7 @@ pub async fn handle_apply_snapshot(
                     node_to_playlist_id
                         .insert(action.node.clone(), parse_id_from_playlist_id(&playlist.id));
                 }
-                plan_command::ActionType::QuerySongs(url) => {
+                types::ActionType::QuerySongs(url) => {
                     if let Some(songs) = map.get(&action.node) {
                         // By default, the playlist should be empty.
                         if songs.len() > 0 {
@@ -175,7 +176,7 @@ pub async fn handle_apply_snapshot(
                         map.insert(to_local(&action.node), tracks.clone());
                     }
                 }
-                plan_command::ActionType::CopySongs => {
+                types::ActionType::CopySongs => {
                     let tracks = map.get(&to_local(&action.node)).unwrap().clone();
                     let target = map.get_mut(&to_local(&action.for_node)).unwrap();
 
@@ -188,12 +189,12 @@ pub async fn handle_apply_snapshot(
                     }
                 }
                 // We dont care if the song was added by the user or the bot we remove it anyway.
-                plan_command::ActionType::RemoveSongs => {
+                types::ActionType::RemoveSongs => {
                     let remote = map.get(&action.node).unwrap().clone();
                     let local = map.get_mut(&to_local(&action.for_node)).unwrap();
                     local.retain(|t| !remote.contains(t));
                 }
-                plan_command::ActionType::SaveChanges(_) => {
+                types::ActionType::SaveChanges(_) => {
                     let remote = map.get(&action.node).unwrap().clone();
                     let local = map.get_mut(&to_local(&action.for_node)).unwrap();
 
@@ -258,6 +259,7 @@ pub async fn handle_apply_snapshot(
                     let state = local.clone();
                     map.insert(to_local(&action.node), state);
                 }
+                types::ActionType::QuerySongsByArtist(_) => todo!(),
             }
         }
     }

@@ -1,50 +1,19 @@
 use std::{fs, io};
 
-use anyhow::{anyhow, Ok};
+use anyhow::anyhow;
 use graphviz_dot_parser::types::{GraphAST, Stmt};
 use url::Url;
 
-use crate::{constants, traits::ResultExtension};
+use crate::{
+    constants,
+    traits::ResultExtension,
+    types::{Action, ActionType, QuerySongsByArtist, QuerySource},
+};
 
 use super::args;
 
 type EdgeData = (String, String, graphviz_dot_parser::types::Attributes);
 type NodeData = (String, graphviz_dot_parser::types::Attributes);
-
-#[derive(Debug)]
-pub struct Action {
-    pub action_type: ActionType,
-    pub node: String,
-    pub for_node: String,
-    pub idx: usize,
-    pub playlist_url: Option<String>,
-}
-
-impl std::fmt::Display for Action {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{:?} from {} for/to {} and idx is {}",
-            self.action_type, self.node, self.for_node, self.idx
-        )
-    }
-}
-
-// TODO: Add support for artist query.
-#[derive(Debug)]
-pub enum ActionType {
-    CreatePlaylist,
-    QuerySongs(Option<String>),
-
-    /// SaveChanges is responsible for also saving the state locally.
-    SaveChanges(Option<String>),
-    CopySongs,
-
-    /// RemoveSongs should only remove songs not added by the user. Only be the bot.
-    /// There is also a chance that song from a child playlist was added by a user.
-    /// In that case we should not remove it. (No idea how to do that yet)
-    RemoveSongs,
-}
 
 pub fn handle_plan_snapshot(cmd: &args::PlanCommand) -> Result<(), anyhow::Error> {
     let content = read_snapshot_file(cmd.id, "edit")?;
@@ -103,17 +72,23 @@ pub fn create_execution_plan(
                 root_nodes.push(node.to_string());
             }
 
-            // All base nodes should have a spotify url attribute.
+            // Base nodes, that are not of type query, should have a spotify url attribute.
             if number_of_incoming_edges == 0 && number_of_outgoing_edges > 0 {
                 let attr = attrs
                     .iter()
                     .find(|(k, _)| k == constants::URL_ATTRIBUTE_KEY);
 
                 if attr.is_none() {
-                    error = Some(anyhow!(
-                        "Node {:?} is a base node and should have a spotify url attribute",
-                        node
-                    ));
+                    let is_query = attr
+                        .iter()
+                        .any(|(k, v)| k == constants::TYPE_ATTRIBUTE_KEY && v == "query");
+
+                    if is_query {
+                        error = Some(anyhow!(
+                            "Node {:?} is a base node and should have a spotify url attribute",
+                            node
+                        ));
+                    }
                 } else {
                     let (_, url) = attr.unwrap();
                     let _ = Url::parse(url).expect(&format!(
@@ -145,7 +120,7 @@ pub fn create_execution_plan(
     }
 
     let mut all_actions: Vec<Vec<Action>> = Vec::new();
-    let res = create_node_execution_plan(1, &root, &nodes, &edges, &graph);
+    let res = create_node_execution_plan(1, &root, &nodes, &edges, &graph)?;
     all_actions.push(res);
 
     return Ok((all_actions, nodes.clone()));
@@ -157,7 +132,7 @@ fn create_node_execution_plan(
     nodes: &Vec<NodeData>,
     edges: &Vec<EdgeData>,
     graph: &petgraph::Graph<String, ()>,
-) -> Vec<Action> {
+) -> Result<Vec<Action>, anyhow::Error> {
     let mut actions: Vec<Action> = Vec::new();
 
     let node_index = graph
@@ -186,7 +161,7 @@ fn create_node_execution_plan(
             continue;
         }
 
-        let r = create_node_execution_plan(idx + 1, from_node, nodes, edges, graph);
+        let r = create_node_execution_plan(idx + 1, from_node, nodes, edges, graph)?;
         for action in r {
             actions.push(action);
         }
@@ -201,7 +176,7 @@ fn create_node_execution_plan(
     }
 
     for (n, _, _) in edges_with_subtraction {
-        let r = create_node_execution_plan(idx + 1, &n, nodes, edges, graph);
+        let r = create_node_execution_plan(idx + 1, &n, nodes, edges, graph)?;
         for action in r {
             actions.push(action);
         }
@@ -223,7 +198,99 @@ fn create_node_execution_plan(
     let playlist_already_exists = attr.iter().find(|(k, _)| k == constants::URL_ATTRIBUTE_KEY);
 
     if !has_neighbors {
-        assert!(playlist_already_exists.is_some());
+        let is_query = attr
+            .iter()
+            .any(|(k, v)| k == constants::TYPE_ATTRIBUTE_KEY && v == "query");
+
+        if !is_query {
+            if playlist_already_exists.is_none() {
+                return Err(anyhow!(
+                    "Node {:?} is a base node and should have a spotify url attribute",
+                    current_node
+                ));
+            }
+        } else {
+            let must_be_liked = attr
+                .iter()
+                .find(|(k, _)| k == constants::MUST_BE_LIKED_ATTRIBUTE_KEY)
+                .map(|(_, v)| v.as_str().parse::<bool>());
+
+            let must_be_liked = match must_be_liked {
+                Some(Ok(v)) => Some(v),
+                Some(Err(e)) => {
+                    return Err(anyhow!(
+                        "Failed to parse must_be_liked attribute of node {:?} with error: {:?}",
+                        current_node,
+                        e
+                    ));
+                }
+                None => None,
+            };
+
+            let artist_id = attr
+                .iter()
+                .find(|(k, _)| k == constants::ARTIST_ID_ATTRIBUTE_KEY)
+                .map(|(_, v)| v.clone());
+
+            let artist_id = match artist_id {
+                Some(v) => v,
+                None => {
+                    return Err(anyhow!(
+                        "Node {:?} is a query node and should have a artist_id attribute",
+                        current_node
+                    ));
+                }
+            };
+
+            let include_features = attr
+                .iter()
+                .find(|(k, _)| k == constants::INCLUDE_FEATURES_ATTRIBUTE_KEY)
+                .map(|(_, v)| v.as_str().parse::<bool>());
+
+            let include_features = match include_features {
+                Some(Ok(v)) => Some(v),
+                Some(Err(e)) => {
+                    return Err(anyhow!(
+                        "Failed to parse include_features attribute of node {:?} with error: {:?}",
+                        current_node,
+                        e
+                    ));
+                }
+                None => None,
+            };
+
+            let source = attr
+                .iter()
+                .find(|(k, _)| k == constants::SOURCE_ATTRIBUTE_KEY)
+                .map(|(_, v)| v.as_str().parse::<QuerySource>());
+
+            let source = match source {
+                Some(Ok(v)) => Some(v),
+                Some(Err(e)) => {
+                    return Err(anyhow!(
+                        "Failed to parse source attribute of node {:?} with error: {:?}",
+                        current_node,
+                        e
+                    ));
+                }
+                None => None,
+            };
+
+            let query = QuerySongsByArtist {
+                artist_id,
+                include_features,
+                source,
+                must_be_liked,
+            };
+
+            final_node_actions.push(Action {
+                action_type: ActionType::QuerySongsByArtist(query),
+                node: current_node.clone(),
+                idx,
+                for_node: current_node.clone(),
+                playlist_url: None,
+            });
+        }
     }
 
     if let Some((_, url)) = playlist_already_exists {
@@ -267,7 +334,7 @@ fn create_node_execution_plan(
         actions.push(action);
     }
 
-    return actions;
+    return Ok(actions);
 }
 
 fn validate_graph(graph: &GraphAST) -> Result<(), anyhow::Error> {
