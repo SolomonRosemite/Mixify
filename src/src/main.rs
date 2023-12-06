@@ -20,6 +20,18 @@ async fn main() {
     builder.filter(Some("rspotify_http"), log::LevelFilter::Off);
     builder.init();
 
+    let allow_removing_songs =
+        std::env::var("ALLOW_REMOVING_SONGS").expect("ALLOW_REMOVING_SONGS not set");
+
+    let allow_delete = match allow_removing_songs.as_str() {
+        "true" => true,
+        "false" => false,
+        _ => {
+            log::error!("ALLOW_REMOVING_SONGS is not set to true or false. exiting...");
+            return;
+        }
+    };
+
     // create_spotify_token().await;
     // return;
 
@@ -29,7 +41,9 @@ async fn main() {
     let data = match args.entity_type {
         args::EntityType::New(cmd) => new_command::handle_new_snapshot(&cmd),
         args::EntityType::Plan(cmd) => plan_command::handle_plan_snapshot(&cmd),
-        args::EntityType::Apply(cmd) => apply_command::handle_apply_snapshot(&cmd, &spotify).await,
+        args::EntityType::Apply(cmd) => {
+            apply_command::handle_apply_snapshot(&cmd, &spotify, allow_delete).await
+        }
     };
 
     match data {

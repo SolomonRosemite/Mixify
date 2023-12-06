@@ -16,6 +16,7 @@ use super::args;
 pub async fn handle_apply_snapshot(
     cmd: &args::ApplyCommand,
     spotify: &AuthCodeSpotify,
+    allow_delete: bool,
 ) -> Result<(), anyhow::Error> {
     let content = plan_command::read_snapshot_file(cmd.id, "edit")?;
     let gv =
@@ -223,7 +224,14 @@ pub async fn handle_apply_snapshot(
                         log::info!("No songs to add to playlist {:?}", &playlist_id);
                     }
 
-                    if songs_to_remove.len() != 0 {
+                    log::info!("Option allow to delete is {:?}", allow_delete);
+                    if !allow_delete {
+                        log::info!(
+                            "Skipping removing songs {:?} from playlist {:?}",
+                            songs_to_remove.len(),
+                            &playlist_id
+                        );
+                    } else if songs_to_remove.len() != 0 {
                         let ids = songs_to_remove
                             .iter()
                             .map(|t| PlayableId::Track(t.id.clone().unwrap()))
