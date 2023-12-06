@@ -21,7 +21,7 @@ pub async fn handle_apply_snapshot(
     let gv =
         graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
     let graph = gv.to_directed_graph().unwrap();
-    let all_actions = plan_command::create_execution_plan(&gv)?;
+    let (all_actions, nodes) = plan_command::create_execution_plan(&gv)?;
 
     // TODO:For better performance, maybe create a list of tracks and use refs in the map like
     // let mut map: HashMap<String, Vec<&rspotify::model::FullTrack>> = HashMap::new();
@@ -74,10 +74,24 @@ pub async fn handle_apply_snapshot(
                         names.join(", ")
                     );
 
+                    let (_, attr) = nodes
+                        .iter()
+                        .find(|(name, _)| *name == *action.node)
+                        .unwrap();
+
+                    let playlist_name_attr = attr
+                        .iter()
+                        .find(|(k, _)| k == constants::LABEL_ATTRIBUTE_KEY);
+
+                    let mut playlist_name = action.node.clone();
+                    if let Some((_, v)) = playlist_name_attr {
+                        playlist_name = v.clone();
+                    }
+
                     let playlist = spotify
                         .user_playlist_create(
-                            user.id.as_ref(),
-                            format!("{}™", action.node).as_str(),
+                            user.id.clone(),
+                            &format!("{}™", playlist_name),
                             Some(false),
                             Some(false),
                             Some(&description),

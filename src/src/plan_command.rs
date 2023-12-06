@@ -50,7 +50,7 @@ pub fn handle_plan_snapshot(cmd: &args::PlanCommand) -> Result<(), anyhow::Error
     let content = read_snapshot_file(cmd.id, "edit")?;
     let gv =
         graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
-    let res = create_execution_plan(&gv)?;
+    let (res, _) = create_execution_plan(&gv)?;
 
     for actions in res {
         let mut idx = 0;
@@ -67,7 +67,9 @@ pub fn handle_plan_snapshot(cmd: &args::PlanCommand) -> Result<(), anyhow::Error
     return Ok(());
 }
 
-pub fn create_execution_plan(gv: &GraphAST) -> Result<Vec<Vec<Action>>, anyhow::Error> {
+pub fn create_execution_plan(
+    gv: &GraphAST,
+) -> Result<(Vec<Vec<Action>>, Vec<NodeData>), anyhow::Error> {
     let mixify_root_node = (
         constants::MIXIFY_TEMPORARY_ROOT_NODE_NAME.to_string(),
         vec![],
@@ -146,7 +148,7 @@ pub fn create_execution_plan(gv: &GraphAST) -> Result<Vec<Vec<Action>>, anyhow::
     let res = create_node_execution_plan(1, &root, &nodes, &edges, &graph);
     all_actions.push(res);
 
-    return Ok(all_actions);
+    return Ok((all_actions, nodes.clone()));
 }
 
 fn create_node_execution_plan(
