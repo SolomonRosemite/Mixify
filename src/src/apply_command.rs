@@ -80,7 +80,7 @@ pub async fn handle_apply_snapshot(
                             format!("{}™", action.node).as_str(),
                             Some(false),
                             Some(false),
-                            Some(description.as_str()),
+                            Some(&description),
                         )
                         .await
                         .or_error_str("failed to create playlist")?;
@@ -251,82 +251,83 @@ pub async fn handle_apply_snapshot(
         &content,
         &node_to_playlist_id,
         &nodes_with_missing_playlists,
-    )
-    .await?;
+    )?;
 
-    // TODO: bring this back
-    // std::fs::rename(path, pre_apply_path)?;
-    // std::fs::write(post_apply_path, new_content)?;
+    std::fs::rename(path, pre_apply_path)?;
+    std::fs::write(post_apply_path, new_content)?;
     return Ok(());
 }
 
-async fn create_post_apply_file(
+pub fn create_post_apply_file(
     content: &String,
-    node_to_playlist_id: &HashMap<String, String>,
+    node_to_playlist_url: &HashMap<String, String>,
     nodes_with_missing_playlists: &Vec<String>,
 ) -> Result<String, anyhow::Error> {
-    let mut idx = 0;
-    let mut new_content = content.clone();
+    let parts = content
+        .split(";")
+        .map(|part| part.to_string())
+        .collect::<Vec<String>>();
 
-    for (node, playlist_id) in node_to_playlist_id {
+    let mut res_parts = parts.clone();
+    for (node, playlist_url) in node_to_playlist_url {
         if !nodes_with_missing_playlists.contains(node) {
             continue;
         }
 
-        let chars = node.chars().collect::<Vec<char>>();
-        let content_chars = new_content.chars().collect::<Vec<char>>();
-        for (i, l) in content_chars.iter().enumerate() {
-            if *l != chars[idx] {
-                idx = 0;
-                continue;
-            } else if idx != chars.len() - 1 {
-                idx += 1;
+        let mut item: Option<(usize, usize, String)> = None;
+        for (idx, part) in parts.iter().enumerate() {
+            if part.contains("->") {
                 continue;
             }
 
-            let s = content_chars
-                .iter()
-                .skip(i - node.len())
-                .take(node.len() + 1)
-                .collect::<String>();
+            let trimmed = part.trim_matches(|c| c == ' ' || c == '\n');
+            let node_with_quotes = format!("\"{}\"", node);
 
-            let s = s.trim();
+            if trimmed.starts_with(node) || trimmed.starts_with(&node_with_quotes) {
+                part.chars().enumerate().for_each(|(i, c)| {
+                    if c != '[' || item.is_some() {
+                        return;
+                    }
 
-            idx = 0;
-            if s != *node {
-                continue;
-            }
+                    let mut end = ", ";
+                    if !part.contains("]") {
+                        end = "]";
+                    }
 
-            for (j, c) in content.chars().skip(i).enumerate() {
-                if c != '[' && c != ';' {
-                    continue;
+                    let s = format!(
+                        "URL=\"https://open.spotify.com/playlist/{}\"{}",
+                        playlist_url, end,
+                    );
+                    item = Some((idx, i + 1, s));
+                });
+
+                if item.is_none() {
+                    item = Some((
+                        idx,
+                        part.len(),
+                        format!(
+                            " [URL=\"https://open.spotify.com/playlist/{}\"]",
+                            playlist_url
+                        ),
+                    ));
                 }
-
-                let has_attr = c == '[';
-                let idxxx = match has_attr {
-                    true => i + j + 1,
-                    false => i + j,
-                };
-
-                let s = match has_attr {
-                    true => format!(
-                        "URL=\"https://open.spotify.com/playlist/{}\", ",
-                        playlist_id
-                    ),
-                    false => format!(
-                        " [URL=\"https://open.spotify.com/playlist/{}\"]",
-                        playlist_id
-                    ),
-                };
-
-                new_content.insert_str(idxxx, s.as_str());
-                break;
             }
-            break;
+        }
+
+        if let Some(item) = item {
+            let (idx, i, s) = item;
+            res_parts[idx].insert_str(i, &s);
+
+            log::info!("Successfully added playlist url to node {:?}", node);
+        } else {
+            log::error!(
+                "Could not find node {:?} in the graph and could not add the playlist url to it",
+                node
+            );
         }
     }
 
-    Ok(new_content)
+    return Ok(res_parts.join(";"));
 }
 
 fn parse_id_from_playlist_id(playlist_id: &rspotify::model::PlaylistId) -> String {
