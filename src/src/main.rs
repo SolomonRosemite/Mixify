@@ -93,3 +93,34 @@ fn create_client_from_token() -> AuthCodeSpotify {
 
     return rspotify::AuthCodeSpotify::from_token(token);
 }
+
+fn _test(id: u32) -> Result<(), anyhow::Error> {
+    let content = plan_command::read_snapshot_file(id, "edit")?;
+
+    let nodes_with_missing_playlists: Vec<String> =
+        vec!["GenB".to_string(), "GenC".to_string(), "GenD1".to_string()];
+    let node_to_playlist_id: std::collections::HashMap<String, String> = [
+        ("A".to_string(), "3r9s1n1lxznFBJkNJlzPu9".to_string()),
+        ("B".to_string(), "4V5BuvXQdPcrgh4aJrrA5d".to_string()),
+        ("Z".to_string(), "4hqSeNfRhjhJkUzIXUvPdy".to_string()),
+        ("GenB".to_string(), "1l3dIZoMLFmcnv4B2nGJ0C".to_string()),
+        ("GenC".to_string(), "09lRngXkq6ibMzmzQpHB79".to_string()),
+        ("GenD1".to_string(), "4ecqGD1FKBoJ1wmxmsnULe".to_string()),
+    ]
+    .iter()
+    .cloned()
+    .collect();
+
+    let paths = plan_command::list_snapshot_files(id, "edit")?;
+    let path = paths.get(0).unwrap().to_str().unwrap();
+    let x = path.replace("edit", "test.apply");
+
+    let new_content = apply_command::create_post_apply_file(
+        &content,
+        &node_to_playlist_id,
+        &nodes_with_missing_playlists,
+    )?;
+
+    std::fs::write(x, new_content)?;
+    Ok(())
+}
