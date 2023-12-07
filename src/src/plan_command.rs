@@ -144,6 +144,7 @@ fn create_node_execution_plan(
     let has_neighbors = names.len() > 0;
 
     let mut edges_with_subtraction: Vec<&EdgeData> = Vec::new();
+    let mut is_query_node = false;
 
     let mut final_node_actions: Vec<Action> = Vec::new();
     for from_node in &names {
@@ -283,13 +284,16 @@ fn create_node_execution_plan(
                 must_be_liked,
             };
 
+            let url = playlist_already_exists.map(|(_, url)| url.clone());
             final_node_actions.push(Action {
                 action_type: ActionType::QuerySongsByArtist(query),
                 node: current_node.clone(),
                 idx,
                 for_node: current_node.clone(),
-                playlist_url: None,
+                playlist_url: url.clone(),
             });
+
+            is_query_node = true;
         }
     }
 
@@ -303,7 +307,7 @@ fn create_node_execution_plan(
             playlist_url: Some(url.clone()),
         });
 
-        if has_neighbors {
+        if has_neighbors || is_query_node {
             final_node_actions.push(Action {
                 action_type: ActionType::SaveChanges(Some(url.clone())),
                 node: current_node.clone(),

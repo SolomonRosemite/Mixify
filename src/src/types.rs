@@ -46,7 +46,7 @@ pub enum ActionType {
     RemoveSongs,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum QuerySource {
     LikedSongs,
     Playlists,
@@ -60,7 +60,7 @@ pub struct QuerySongsByArtist {
     /// https://open.spotify.com/artist/7gW0r5CkdEUMm42w9XpyZO
     pub artist_id: String,
 
-    /// If true includes songs in which the artist is featured.
+    /// If true only includes songs in which the artist is featured.
     /// If false only includes songs where the artist is the main artist.
     /// If None includes both.
     pub include_features: Option<bool>,

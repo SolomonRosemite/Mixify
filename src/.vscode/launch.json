@@ -7,7 +7,7 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "mixify, plan 3",
+      "name": "mixify, plan 8",
       "cargo": {
         "args": ["build", "--bin=mixify", "--package=mixify"],
         "filter": {
@@ -15,13 +15,13 @@
           "kind": "bin"
         }
       },
-      "args": ["plan", "3"],
+      "args": ["plan", "8"],
       "cwd": "${workspaceFolder}"
     },
     {
       "type": "lldb",
       "request": "launch",
-      "name": "mixify, apply 4",
+      "name": "mixify, apply 8",
       "cargo": {
         "args": ["build", "--bin=mixify", "--package=mixify"],
         "filter": {
@@ -29,7 +29,7 @@
           "kind": "bin"
         }
       },
-      "args": ["apply", "4"],
+      "args": ["apply", "8"],
       "cwd": "${workspaceFolder}"
     }
   ]

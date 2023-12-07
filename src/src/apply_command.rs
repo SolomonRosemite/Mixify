@@ -1,9 +1,13 @@
 use std::collections::HashMap;
 
+use futures_util::stream::StreamExt;
+
+use rspotify::clients::pagination::Paginator;
+use rspotify::model::TrackId;
 use rspotify::{
     model::FullTrack,
     prelude::{BaseClient, OAuthClient, PlayableId},
-    AuthCodeSpotify,
+    AuthCodeSpotify, ClientResult,
 };
 
 use crate::{
@@ -27,7 +31,7 @@ pub async fn handle_apply_snapshot(
 
     // TODO:For better performance, maybe create a list of tracks and use refs in the map like
     // let mut map: HashMap<String, Vec<&rspotify::model::FullTrack>> = HashMap::new();
-    let mut map: HashMap<String, Vec<rspotify::model::FullTrack>> = HashMap::new();
+    let mut map: HashMap<String, Vec<TrackId>> = HashMap::new();
     let mut node_to_playlist_id: HashMap<String, String> = HashMap::new();
     let mut nodes_with_missing_playlists: Vec<String> = Vec::new();
 
@@ -139,6 +143,10 @@ pub async fn handle_apply_snapshot(
                         .await
                         .or_error_str("failed to fetch playlist")?;
 
+                    // TODO: ...
+                    // let y = spotify.playlist_items(playlist_id.clone(), None, None);
+                    // let x = y.collect::<Vec<_>>().await;
+                    // todo!("replace");
                     let tracks = playlist
                         .tracks
                         .items
@@ -155,7 +163,9 @@ pub async fn handle_apply_snapshot(
                             }
 
                             match item.unwrap() {
-                                rspotify::model::PlayableItem::Track(track) => Some(track),
+                                rspotify::model::PlayableItem::Track(track) => {
+                                    Some(track.id.unwrap())
+                                }
                                 rspotify::model::PlayableItem::Episode(_) => {
                                     let msg = format!(
                                         "Skipping episode from playlist {:?}",
@@ -167,13 +177,13 @@ pub async fn handle_apply_snapshot(
                                 }
                             }
                         })
-                        .collect::<Vec<FullTrack>>();
+                        .collect::<Vec<_>>();
 
                     map.insert(action.node.clone(), tracks.clone());
 
                     let has_songs = map.get(&to_local(&action.node)).unwrap().len() > 0;
                     if !has_songs {
-                        map.insert(to_local(&action.node), tracks.clone());
+                        map.insert(to_local(&action.node), tracks);
                     }
                 }
                 types::ActionType::CopySongs => {
@@ -209,8 +219,8 @@ pub async fn handle_apply_snapshot(
 
                     if songs_to_add.len() != 0 {
                         let ids = songs_to_add
-                            .iter()
-                            .map(|t| PlayableId::Track(t.id.clone().unwrap()))
+                            .into_iter()
+                            .map(|t| PlayableId::Track(t))
                             .collect::<Vec<rspotify::model::PlayableId>>();
 
                         let res = spotify
@@ -234,8 +244,8 @@ pub async fn handle_apply_snapshot(
                         );
                     } else if songs_to_remove.len() != 0 {
                         let ids = songs_to_remove
-                            .iter()
-                            .map(|t| PlayableId::Track(t.id.clone().unwrap()))
+                            .into_iter()
+                            .map(|t| PlayableId::Track(t))
                             .collect::<Vec<rspotify::model::PlayableId>>();
 
                         log::info!("Removing songs to playlist {:?}", &playlist_id);
@@ -259,7 +269,252 @@ pub async fn handle_apply_snapshot(
                     let state = local.clone();
                     map.insert(to_local(&action.node), state);
                 }
-                types::ActionType::QuerySongsByArtist(_) => todo!(),
+                types::ActionType::QuerySongsByArtist(q) => {
+                    let albums = spotify.current_user_saved_albums(None);
+                    let albums = albums.collect::<Vec<_>>().await;
+
+                    let all_playlists = spotify.current_user_playlists();
+                    let all_playlists = all_playlists.collect::<Vec<_>>().await;
+
+                    let liked_songs = spotify.current_user_saved_tracks(None);
+                    let liked_songs = liked_songs.collect::<Vec<_>>().await;
+
+                    let mut tracks = vec![];
+
+                    let artist_id =
+                        rspotify::model::ArtistId::from_id(q.artist_id.clone()).or_error(
+                            format!("failed to parse artist id correctly from {}", q.artist_id),
+                        )?;
+
+                    if (q.source.is_none()
+                        || *q.source.as_ref().unwrap() == types::QuerySource::LikedSongs)
+                        && (q.must_be_liked.is_none() || q.must_be_liked.unwrap_or(false))
+                    {
+                        liked_songs.iter().for_each(|t| {
+                            if let Err(e) = t {
+                                let x = format!("failed to fetch liked song {:?}", e);
+                                panic!("{}", x);
+                            }
+
+                            let t = t.as_ref().unwrap().clone().track;
+
+                            // let t = t.clone().as_ref().unwrap().track;
+                            let artist_is_in_song =
+                                t.artists.iter().any(|a| a.clone().id.unwrap() == artist_id);
+
+                            if !artist_is_in_song {
+                                return;
+                            }
+
+                            let skip: bool = match q.include_features {
+                                Some(v) => {
+                                    let is_main =
+                                        t.artists.first().unwrap().id.clone().unwrap() == artist_id;
+
+                                    if v {
+                                        if is_main {
+                                            true
+                                        } else {
+                                            false
+                                        }
+                                    } else {
+                                        if is_main {
+                                            false
+                                        } else {
+                                            true
+                                        }
+                                    }
+                                }
+                                None => false,
+                            };
+
+                            if skip {
+                                return;
+                            }
+
+                            tracks.push(t.id.unwrap());
+                        });
+                    }
+
+                    if q.source.is_none()
+                        || *q.source.as_ref().unwrap() == types::QuerySource::Albums
+                    {
+                        albums
+                            .iter()
+                            .map(|a| a.as_ref().unwrap().clone().album)
+                            .inspect(|a| {
+                                if a.tracks.items.len() as u32 != a.tracks.total {
+                                    log::error!(
+                                        "album {:?} has {} songs but the total is {}. exiting...",
+                                        a.name,
+                                        a.tracks.items.len(),
+                                        a.tracks.total
+                                    );
+                                    panic!();
+                                }
+                            })
+                            .flat_map(|a| a.tracks.items)
+                            .for_each(|t| {
+                                let artist_is_in_song =
+                                    t.artists.iter().any(|a| a.clone().id.unwrap() == artist_id);
+                                if !artist_is_in_song {
+                                    return;
+                                }
+
+                                let skip: bool = match q.include_features {
+                                    Some(v) => {
+                                        let is_main =
+                                            t.artists.first().unwrap().id.clone().unwrap()
+                                                == artist_id;
+
+                                        if v {
+                                            if is_main {
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        } else {
+                                            if is_main {
+                                                false
+                                            } else {
+                                                true
+                                            }
+                                        }
+                                    }
+                                    None => false,
+                                };
+
+                                let id = t.id.unwrap();
+
+                                if skip {
+                                    return;
+                                } else if let Some(v) = q.must_be_liked {
+                                    let found = liked_songs.iter().any(|tra| {
+                                        let tra = tra.as_ref().unwrap().clone().track;
+                                        tra.id.unwrap() == id
+                                    });
+
+                                    if v {
+                                        if !found {
+                                            return;
+                                        }
+                                    } else {
+                                        if found {
+                                            return;
+                                        }
+                                    }
+                                }
+
+                                tracks.push(id);
+                            });
+                    }
+
+                    if q.source.is_none() || q.source.unwrap() == types::QuerySource::Playlists {
+                        let playlists = all_playlists
+                            .iter()
+                            .map(|p| {
+                                let p = p.as_ref().unwrap().clone();
+                                (p.id, p.name)
+                            })
+                            .collect::<Vec<_>>();
+
+                        let mut all_songs = vec![];
+                        for (id, name) in playlists {
+                            let x = spotify.playlist_items(id, None, None);
+                            let songs = x.collect::<Vec<_>>().await;
+
+                            let total_len = songs.len();
+
+                            let songs = songs
+                                .into_iter()
+                                .filter_map(|r| match r {
+                                    Ok(s) => Some(s),
+                                    Err(e) => {
+                                        log::warn!("failed to fetch song {:?}", e);
+                                        None
+                                    }
+                                })
+                                .collect::<Vec<_>>();
+
+                            if total_len != songs.len() {
+                                log::warn!(
+                                    "Playlist {} has {} songs and {} songs could not be fetched and will be skipped...",
+                                    name,
+                                    songs.len(),
+                                    songs.len() - total_len,
+                                );
+                            }
+
+                            all_songs.extend(songs);
+                        }
+
+                        all_songs
+                            .into_iter()
+                            .filter_map(|t| match t.track.unwrap() {
+                                rspotify::model::PlayableItem::Track(track) => Some(track),
+                                rspotify::model::PlayableItem::Episode(e) => {
+                                    log::warn!("Skipping episode {:?}", e);
+                                    None
+                                }
+                            })
+                            .for_each(|t| {
+                                let artist_is_in_song =
+                                    t.artists.iter().any(|a| a.clone().id.unwrap() == artist_id);
+                                if !artist_is_in_song {
+                                    return;
+                                }
+
+                                let skip: bool = match q.include_features {
+                                    Some(v) => {
+                                        let is_main =
+                                            t.artists.first().unwrap().id.clone().unwrap()
+                                                == artist_id;
+
+                                        if v {
+                                            if is_main {
+                                                true
+                                            } else {
+                                                false
+                                            }
+                                        } else {
+                                            if is_main {
+                                                false
+                                            } else {
+                                                true
+                                            }
+                                        }
+                                    }
+                                    None => false,
+                                };
+
+                                let id = t.id.unwrap();
+
+                                if skip {
+                                    return;
+                                } else if let Some(v) = q.must_be_liked {
+                                    let found = liked_songs.iter().any(|tra| {
+                                        let tra = tra.as_ref().unwrap().clone().track;
+                                        tra.id.unwrap() == id
+                                    });
+
+                                    if v {
+                                        if !found {
+                                            return;
+                                        }
+                                    } else {
+                                        if found {
+                                            return;
+                                        }
+                                    }
+                                }
+
+                                tracks.push(id);
+                            });
+                    }
+
+                    tracks.dedup();
+                    map.insert(to_local(&action.node), tracks);
+                }
             }
         }
     }
@@ -287,7 +542,25 @@ pub fn create_post_apply_file(
     node_to_playlist_url: &HashMap<String, String>,
     nodes_with_missing_playlists: &Vec<String>,
 ) -> Result<String, anyhow::Error> {
-    let parts = content
+    let pfx = content
+        .chars()
+        .take_while(|&ch| ch != '{')
+        .collect::<String>();
+
+    let sfx2 = content
+        .chars()
+        .skip_while(|&ch| ch != '}')
+        .skip(1)
+        .collect::<String>();
+
+    let inner = content
+        .chars()
+        .skip_while(|&ch| ch != '{')
+        .skip(1)
+        .take_while(|&ch| ch != '}')
+        .collect::<String>();
+
+    let parts = inner
         .split(";")
         .map(|part| part.to_string())
         .collect::<Vec<String>>();
@@ -351,7 +624,8 @@ pub fn create_post_apply_file(
         }
     }
 
-    return Ok(res_parts.join(";"));
+    let new_content = format!("{}{}{}{}{}", pfx, "{", res_parts.join(";"), "}", sfx2);
+    return Ok(new_content);
 }
 
 fn parse_id_from_playlist_id(playlist_id: &rspotify::model::PlaylistId) -> String {
