@@ -2,19 +2,13 @@ use std::collections::HashMap;
 
 use futures_util::stream::StreamExt;
 
-use rspotify::clients::pagination::Paginator;
 use rspotify::model::TrackId;
 use rspotify::{
-    model::FullTrack,
     prelude::{BaseClient, OAuthClient, PlayableId},
-    AuthCodeSpotify, ClientResult,
+    AuthCodeSpotify,
 };
 
-use crate::{
-    constants, plan_command,
-    traits::{OptionExtension, ResultExtension},
-    types,
-};
+use crate::{constants, plan_command, traits::ResultExtension, types};
 
 use super::args;
 
@@ -138,21 +132,13 @@ pub async fn handle_apply_snapshot(
                     node_to_playlist_id
                         .insert(action.node.clone(), parse_id_from_playlist_id(&playlist_id));
 
-                    let playlist = spotify
-                        .user_playlist(user.id.as_ref(), Some(playlist_id.clone()), None)
-                        .await
-                        .or_error_str("failed to fetch playlist")?;
+                    let playlist = spotify.playlist_items(playlist_id.clone(), None, None);
+                    let songs = playlist.collect::<Vec<_>>().await;
 
-                    // TODO: ...
-                    // let y = spotify.playlist_items(playlist_id.clone(), None, None);
-                    // let x = y.collect::<Vec<_>>().await;
-                    // todo!("replace");
-                    let tracks = playlist
-                        .tracks
-                        .items
+                    let tracks = songs
                         .into_iter()
-                        .filter_map(|item| {
-                            let item = item.track.or_error(format!(
+                        .filter_map(|t| {
+                            let item = t.or_error(format!(
                                 "could not work with a song from the playlist id of {}",
                                 playlist_id_str
                             ));
@@ -161,18 +147,12 @@ pub async fn handle_apply_snapshot(
                                 log::warn!("{}", e);
                                 return None;
                             }
-
-                            match item.unwrap() {
+                            match item.unwrap().track.unwrap() {
                                 rspotify::model::PlayableItem::Track(track) => {
                                     Some(track.id.unwrap())
                                 }
-                                rspotify::model::PlayableItem::Episode(_) => {
-                                    let msg = format!(
-                                        "Skipping episode from playlist {:?}",
-                                        playlist_id_str
-                                    );
-                                    log::warn!("{}", msg);
-
+                                rspotify::model::PlayableItem::Episode(e) => {
+                                    log::warn!("Skipping episode {:?}", e);
                                     None
                                 }
                             }
