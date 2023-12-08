@@ -1,7 +1,7 @@
 version: "3"
 
 tasks:
-  create_stuff:
+  view:
     cmds:
-      - "dot -Tpng snapshots/2/2_test.edit.gv -o output.png"
+      - "dot -Tpng snapshots/6/* > target/output.png && feh target/output.png"
     silent: true
