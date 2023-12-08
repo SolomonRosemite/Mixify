@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use futures_util::stream::StreamExt;
 
-use rspotify::model::TrackId;
+use rspotify::model::{SavedAlbum, SavedTrack, SimplifiedPlaylist, TrackId};
+use rspotify::ClientError;
 use rspotify::{
     prelude::{BaseClient, OAuthClient, PlayableId},
     AuthCodeSpotify,
@@ -40,6 +41,11 @@ pub async fn handle_apply_snapshot(
     let mut map: HashMap<String, Vec<TrackId>> = HashMap::new();
     let mut node_to_playlist_id: HashMap<String, String> = HashMap::new();
     let mut nodes_with_missing_playlists: Vec<String> = Vec::new();
+
+    let mut albums: Vec<Result<SavedAlbum, ClientError>> = vec![];
+    let mut playlists: Vec<Result<SimplifiedPlaylist, ClientError>> = vec![];
+    let mut liked_songs: Vec<Result<SavedTrack, ClientError>> = vec![];
+    let mut is_cached = false;
 
     let user = spotify
         .current_user()
@@ -262,15 +268,21 @@ pub async fn handle_apply_snapshot(
                     map.insert(to_local(&action.node), state);
                 }
                 types::ActionType::QuerySongsByArtist(q) => {
-                    let albums = spotify.current_user_saved_albums(None);
-                    let albums = albums.collect::<Vec<_>>().await;
+                    if !is_cached {
+                        let fetched_albums = spotify.current_user_saved_albums(None);
+                        let a = fetched_albums.collect::<Vec<_>>().await;
+                        albums = a;
 
-                    let all_playlists = spotify.current_user_playlists();
-                    let all_playlists = all_playlists.collect::<Vec<_>>().await;
+                        let fetched_playlists = spotify.current_user_playlists();
+                        let p = fetched_playlists.collect::<Vec<_>>().await;
+                        playlists = p;
 
-                    let liked_songs = spotify.current_user_saved_tracks(None);
-                    let liked_songs = liked_songs.collect::<Vec<_>>().await;
+                        let fetched_liked_songs = spotify.current_user_saved_tracks(None);
+                        let ls = fetched_liked_songs.collect::<Vec<_>>().await;
+                        liked_songs = ls;
+                    }
 
+                    is_cached = true;
                     let mut tracks = vec![];
 
                     let artist_id =
@@ -402,7 +414,7 @@ pub async fn handle_apply_snapshot(
                     }
 
                     if q.source.is_none() || q.source.unwrap() == types::QuerySource::Playlists {
-                        let playlists = all_playlists
+                        let playlists = playlists
                             .iter()
                             .map(|p| {
                                 let p = p.as_ref().unwrap().clone();
