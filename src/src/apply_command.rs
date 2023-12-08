@@ -16,8 +16,20 @@ pub async fn handle_apply_snapshot(
     cmd: &args::ApplyCommand,
     spotify: &AuthCodeSpotify,
     allow_delete: bool,
+    is_sync: bool,
 ) -> Result<(), anyhow::Error> {
-    let content = plan_command::read_snapshot_file(cmd.id, "edit")?;
+    let file_suffix = match is_sync {
+        true => {
+            log::info!("Syncing snapshot {}", cmd.id);
+            "post.apply"
+        }
+        false => {
+            log::info!("Applying snapshot {}", cmd.id);
+            "edit"
+        }
+    };
+
+    let content = plan_command::read_snapshot_file(cmd.id, file_suffix)?;
     let gv =
         graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
     let graph = gv.to_directed_graph().unwrap();
@@ -500,6 +512,10 @@ pub async fn handle_apply_snapshot(
     }
 
     log::info!("Successfully applied snapshot");
+
+    if is_sync {
+        return Ok(());
+    }
 
     let paths = plan_command::list_snapshot_files(cmd.id, "edit")?;
     let path = paths.get(0).unwrap().to_str().unwrap();

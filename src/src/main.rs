@@ -39,11 +39,12 @@ async fn main() {
     let spotify = create_client_from_token();
 
     let args = MixifyArgs::parse();
-    let data = match args.entity_type {
+    let data = match &args.entity_type {
         args::EntityType::New(cmd) => new_command::handle_new_snapshot(&cmd),
         args::EntityType::Plan(cmd) => plan_command::handle_plan_snapshot(&cmd),
-        args::EntityType::Apply(cmd) => {
-            apply_command::handle_apply_snapshot(&cmd, &spotify, allow_delete).await
+        args::EntityType::Apply(cmd) | args::EntityType::Sync(cmd) => {
+            let is_sync = matches!(args.entity_type, args::EntityType::Sync(_));
+            apply_command::handle_apply_snapshot(&cmd, &spotify, allow_delete, is_sync).await
         }
     };
 

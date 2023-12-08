@@ -3,7 +3,7 @@ use clap::{Args, Parser, Subcommand};
 #[derive(Debug, Parser)]
 #[clap(
     author = "SolomonRosemite™",
-    about = "A tool that allows you to combine different spotify playlists that sync continuously.",
+    about = "🎧 A tool that allows you to combine different spotify playlists that sync continuously.",
     version = "0.0.1"
 )]
 pub struct MixifyArgs {
@@ -21,9 +21,13 @@ pub enum EntityType {
     #[command(arg_required_else_help = true)]
     Plan(PlanCommand),
 
-    /// Apply playlist updates to Spotify
+    /// Apply playlist snapshot to Spotify
     #[command(arg_required_else_help = true)]
     Apply(ApplyCommand),
+
+    /// Sync a snapshot to Spotify that has been previously applied
+    #[command(arg_required_else_help = true)]
+    Sync(ApplyCommand),
 }
 
 #[derive(Debug, Args)]
