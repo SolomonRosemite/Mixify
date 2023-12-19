@@ -584,7 +584,7 @@ fn to_local(s: &str) -> String {
 // Sometimes an artist is a combination of multiple artists.
 // Like baby gravy or Huncho Jack.
 // In these cases, we can check the owner(s) of the album.
-// In which all the artists are listed. (With the exception of the "Various Artists")
+// In which all the artists are listed. (This also works if the albums says "Various Artists")
 // Example here: https://open.spotify.com/album/0mDeN57X1YtJHfXNdYlJbw
 fn is_main_artist(a: &Vec<ArtistId>, artist_id: &ArtistId) -> bool {
     a.iter().any(|a| a == artist_id)
