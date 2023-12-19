@@ -1,3 +1,5 @@
+use rspotify::model::{ArtistId, TrackId};
+
 impl std::fmt::Display for Action {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
@@ -72,4 +74,14 @@ pub struct QuerySongsByArtist {
     /// If false, only includes songs that are not liked by the user.
     /// If None, includes both.
     pub must_be_liked: Option<bool>,
+}
+
+#[derive(Debug)]
+pub struct Track {
+    pub album_artists_ids: Vec<ArtistId<'static>>,
+
+    /// Note that a track may not have an ID/URI if it's local
+    pub id: Option<TrackId<'static>>,
+    pub is_local: bool,
+    pub name: String,
 }

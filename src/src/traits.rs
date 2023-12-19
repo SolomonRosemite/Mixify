@@ -1,3 +1,5 @@
+use rspotify::model::FullTrack;
+
 pub trait ResultExtension<T, E> {
     fn or_error(self, msg: String) -> Result<T, anyhow::Error>;
     fn or_error_str(self, msg: &str) -> Result<T, anyhow::Error>;
@@ -36,5 +38,20 @@ impl<T> OptionExtension<T> for Option<T> {
         }
 
         return Err(anyhow::anyhow!(msg.to_string()));
+    }
+}
+
+impl Into<crate::types::Track> for FullTrack {
+    fn into(self) -> crate::types::Track {
+        crate::types::Track {
+            id: self.id,
+            name: self.name,
+            is_local: self.is_local,
+            album_artists_ids: self
+                .artists
+                .into_iter()
+                .map(|artist| artist.id.unwrap())
+                .collect::<Vec<_>>(),
+        }
     }
 }
