@@ -21,7 +21,7 @@
     {
       "type": "lldb",
       "request": "launch",
-      "name": "mixify, apply 8",
+      "name": "mixify, apply",
       "cargo": {
         "args": ["build", "--bin=mixify", "--package=mixify"],
         "filter": {
@@ -29,7 +29,21 @@
           "kind": "bin"
         }
       },
-      "args": ["apply", "8"],
+      "args": ["apply", "11"],
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "mixify, sync",
+      "cargo": {
+        "args": ["build", "--bin=mixify", "--package=mixify"],
+        "filter": {
+          "name": "mixify",
+          "kind": "bin"
+        }
+      },
+      "args": ["sync", "11"],
       "cwd": "${workspaceFolder}"
     }
   ]
