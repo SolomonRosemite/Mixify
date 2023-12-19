@@ -29,7 +29,7 @@
           "kind": "bin"
         }
       },
-      "args": ["apply", "11"],
+      "args": ["apply", "12"],
       "cwd": "${workspaceFolder}"
     },
     {
@@ -43,7 +43,7 @@
           "kind": "bin"
         }
       },
-      "args": ["sync", "11"],
+      "args": ["sync", "12"],
       "cwd": "${workspaceFolder}"
     }
   ]
