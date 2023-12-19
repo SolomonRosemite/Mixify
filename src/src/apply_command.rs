@@ -1,8 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use futures_util::stream::StreamExt;
 
-use rspotify::model::{SavedAlbum, SavedTrack, SimplifiedPlaylist, TrackId};
+use rspotify::model::{
+    ArtistId, PlaylistItem, SavedAlbum, SavedTrack, SimplifiedArtist, SimplifiedPlaylist, TrackId,
+};
 use rspotify::ClientError;
 use rspotify::{
     prelude::{BaseClient, OAuthClient, PlayableId},
@@ -47,6 +49,9 @@ pub async fn handle_apply_snapshot(
     let mut liked_songs: Vec<Result<SavedTrack, ClientError>> = vec![];
     let mut is_cached = false;
 
+    let mut all_songs: Vec<PlaylistItem> = vec![];
+    let mut songs_are_cached = false;
+
     let user = spotify
         .current_user()
         .await
@@ -78,6 +83,8 @@ pub async fn handle_apply_snapshot(
             if action.for_node == constants::MIXIFY_TEMPORARY_ROOT_NODE_NAME {
                 continue;
             }
+
+            log::info!("Applying action {:?}", action);
 
             match action.action_type {
                 types::ActionType::CreatePlaylist => {
@@ -167,6 +174,15 @@ pub async fn handle_apply_snapshot(
                             }
                             match item.unwrap().track.unwrap() {
                                 rspotify::model::PlayableItem::Track(track) => {
+                                    if track.is_local {
+                                        log::warn!(
+                                            "Skipping local track {} from playlist {}",
+                                            track.name,
+                                            playlist_id_str
+                                        );
+                                        return None;
+                                    }
+
                                     Some(track.id.unwrap())
                                 }
                                 rspotify::model::PlayableItem::Episode(e) => {
@@ -221,11 +237,23 @@ pub async fn handle_apply_snapshot(
                             .map(|t| PlayableId::Track(t))
                             .collect::<Vec<rspotify::model::PlayableId>>();
 
-                        let res = spotify
-                            .playlist_add_items(playlist_id.clone(), ids, None)
-                            .await;
-                        if let Err(e) = res {
-                            return Err(anyhow::anyhow!("Failed to add songs to playlist {:?}", e));
+                        // TODO: If too many, spotify will return an error.
+                        // We should chunk the requests.
+                        // Do the same for the remove action.
+
+                        let mut chunks = ids.chunks(100);
+                        while let Some(chunk) = chunks.next() {
+                            let items = chunk.iter().map(|y| y.clone_static()).collect::<Vec<_>>();
+
+                            let res = spotify
+                                .playlist_add_items(playlist_id.clone(), items, None)
+                                .await;
+                            if let Err(e) = res {
+                                return Err(anyhow::anyhow!(
+                                    "Failed to add songs to playlist {:?}",
+                                    e
+                                ));
+                            }
                         }
 
                         log::info!("Added songs successfully");
@@ -292,7 +320,7 @@ pub async fn handle_apply_snapshot(
 
                     if (q.source.is_none()
                         || *q.source.as_ref().unwrap() == types::QuerySource::LikedSongs)
-                        && (q.must_be_liked.is_none() || q.must_be_liked.unwrap_or(false))
+                        || (q.must_be_liked.is_none() || q.must_be_liked.unwrap_or(false))
                     {
                         liked_songs.iter().for_each(|t| {
                             if let Err(e) = t {
@@ -302,27 +330,26 @@ pub async fn handle_apply_snapshot(
 
                             let t = t.as_ref().unwrap().clone().track;
 
-                            // let t = t.clone().as_ref().unwrap().track;
-                            let artist_is_in_song =
-                                t.artists.iter().any(|a| a.clone().id.unwrap() == artist_id);
+                            if t.is_local {
+                                log::warn!("Skipping local track {} from liked songs", t.name,);
+                                return;
+                            }
 
-                            if !artist_is_in_song {
+                            let is_main_artist = is_main_artist(&t.artists, &artist_id);
+                            if !is_main_artist {
                                 return;
                             }
 
                             let skip: bool = match q.include_features {
                                 Some(v) => {
-                                    let is_main =
-                                        t.artists.first().unwrap().id.clone().unwrap() == artist_id;
-
                                     if v {
-                                        if is_main {
+                                        if is_main_artist {
                                             true
                                         } else {
                                             false
                                         }
                                     } else {
-                                        if is_main {
+                                        if is_main_artist {
                                             false
                                         } else {
                                             true
@@ -343,7 +370,7 @@ pub async fn handle_apply_snapshot(
                     if q.source.is_none()
                         || *q.source.as_ref().unwrap() == types::QuerySource::Albums
                     {
-                        albums
+                        let res = albums
                             .iter()
                             .map(|a| a.as_ref().unwrap().clone().album)
                             .inspect(|a| {
@@ -357,28 +384,25 @@ pub async fn handle_apply_snapshot(
                                     panic!();
                                 }
                             })
-                            .flat_map(|a| a.tracks.items)
-                            .for_each(|t| {
-                                let artist_is_in_song =
-                                    t.artists.iter().any(|a| a.clone().id.unwrap() == artist_id);
-                                if !artist_is_in_song {
-                                    return;
+                            .collect::<Vec<_>>();
+
+                        for a in res {
+                            for t in a.tracks.items {
+                                let is_main_artist = is_main_artist(&a.artists, &artist_id);
+                                if !is_main_artist {
+                                    continue;
                                 }
 
                                 let skip: bool = match q.include_features {
                                     Some(v) => {
-                                        let is_main =
-                                            t.artists.first().unwrap().id.clone().unwrap()
-                                                == artist_id;
-
                                         if v {
-                                            if is_main {
+                                            if is_main_artist {
                                                 true
                                             } else {
                                                 false
                                             }
                                         } else {
-                                            if is_main {
+                                            if is_main_artist {
                                                 false
                                             } else {
                                                 true
@@ -391,7 +415,7 @@ pub async fn handle_apply_snapshot(
                                 let id = t.id.unwrap();
 
                                 if skip {
-                                    return;
+                                    continue;
                                 } else if let Some(v) = q.must_be_liked {
                                     let found = liked_songs.iter().any(|tra| {
                                         let tra = tra.as_ref().unwrap().clone().track;
@@ -400,88 +424,98 @@ pub async fn handle_apply_snapshot(
 
                                     if v {
                                         if !found {
-                                            return;
+                                            continue;
                                         }
                                     } else {
                                         if found {
-                                            return;
+                                            continue;
                                         }
                                     }
                                 }
 
                                 tracks.push(id);
-                            });
+                            }
+                        }
                     }
 
                     if q.source.is_none() || q.source.unwrap() == types::QuerySource::Playlists {
-                        let playlists = playlists
-                            .iter()
-                            .map(|p| {
-                                let p = p.as_ref().unwrap().clone();
-                                (p.id, p.name)
-                            })
-                            .collect::<Vec<_>>();
-
-                        let mut all_songs = vec![];
-                        for (id, name) in playlists {
-                            let x = spotify.playlist_items(id, None, None);
-                            let songs = x.collect::<Vec<_>>().await;
-
-                            let total_len = songs.len();
-
-                            let songs = songs
-                                .into_iter()
-                                .filter_map(|r| match r {
-                                    Ok(s) => Some(s),
-                                    Err(e) => {
-                                        log::warn!("failed to fetch song {:?}", e);
-                                        None
-                                    }
+                        if !songs_are_cached {
+                            let playlists = playlists
+                                .iter()
+                                .map(|p| {
+                                    let p = p.as_ref().unwrap().clone();
+                                    (p.id, p.name)
                                 })
                                 .collect::<Vec<_>>();
 
-                            if total_len != songs.len() {
-                                log::warn!(
+                            for (id, name) in playlists {
+                                let x = spotify.playlist_items(id, None, None);
+                                let songs = x.collect::<Vec<_>>().await;
+
+                                let total_len = songs.len();
+
+                                let songs = songs
+                                    .into_iter()
+                                    .filter_map(|r| match r {
+                                        Ok(s) => Some(s),
+                                        Err(e) => {
+                                            log::warn!("failed to fetch song {:?}", e);
+                                            None
+                                        }
+                                    })
+                                    .collect::<Vec<_>>();
+
+                                if total_len != songs.len() {
+                                    log::warn!(
                                     "Playlist {} has {} songs and {} songs could not be fetched and will be skipped...",
                                     name,
                                     songs.len(),
-                                    songs.len() - total_len,
+                                    total_len - songs.len(),
                                 );
-                            }
+                                }
 
-                            all_songs.extend(songs);
+                                all_songs.extend(songs);
+                            }
+                            songs_are_cached = true;
                         }
 
                         all_songs
-                            .into_iter()
-                            .filter_map(|t| match t.track.unwrap() {
-                                rspotify::model::PlayableItem::Track(track) => Some(track),
-                                rspotify::model::PlayableItem::Episode(e) => {
-                                    log::warn!("Skipping episode {:?}", e);
-                                    None
+                            .iter()
+                            .filter_map(|t| {
+                                if t.track.is_none() {
+                                    log::warn!("Skipping song {:?}", t);
+                                    return None;
+                                }
+
+                                match t.track.clone().unwrap() {
+                                    rspotify::model::PlayableItem::Track(track) => Some(track),
+                                    rspotify::model::PlayableItem::Episode(e) => {
+                                        log::warn!("Skipping episode {:?}", e);
+                                        None
+                                    }
                                 }
                             })
                             .for_each(|t| {
-                                let artist_is_in_song =
-                                    t.artists.iter().any(|a| a.clone().id.unwrap() == artist_id);
-                                if !artist_is_in_song {
+                                if t.is_local {
+                                    log::warn!("Skipping local track {}", t.name,);
+                                    return;
+                                }
+
+                                let is_main_artist = is_main_artist(&t.album.artists, &artist_id);
+                                if !is_main_artist {
                                     return;
                                 }
 
                                 let skip: bool = match q.include_features {
                                     Some(v) => {
-                                        let is_main =
-                                            t.artists.first().unwrap().id.clone().unwrap()
-                                                == artist_id;
-
                                         if v {
-                                            if is_main {
+                                            if is_main_artist {
                                                 true
                                             } else {
                                                 false
                                             }
                                         } else {
-                                            if is_main {
+                                            if is_main_artist {
                                                 false
                                             } else {
                                                 true
@@ -516,7 +550,12 @@ pub async fn handle_apply_snapshot(
                             });
                     }
 
-                    tracks.dedup();
+                    let tracks = tracks
+                        .into_iter()
+                        .collect::<HashSet<_>>()
+                        .into_iter()
+                        .collect::<Vec<_>>();
+
                     map.insert(to_local(&action.node), tracks);
                 }
             }
@@ -647,4 +686,13 @@ fn parse_id_from_playlist_id(playlist_id: &rspotify::model::PlaylistId) -> Strin
 
 fn to_local(s: &str) -> String {
     format!("local-{}", s)
+}
+
+// Sometimes an artist is a combination of multiple artists.
+// Like baby gravy or Huncho Jack.
+// In these cases, we can check the owner(s) of the album.
+// In which all the artists are listed. (With the exception of the "Various Artists")
+// Example here: https://open.spotify.com/album/0mDeN57X1YtJHfXNdYlJbw
+fn is_main_artist(a: &Vec<SimplifiedArtist>, artist_id: &ArtistId) -> bool {
+    a.iter().any(|a| a.id.clone().unwrap() == *artist_id)
 }
