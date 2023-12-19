@@ -16,7 +16,19 @@ type EdgeData = (String, String, graphviz_dot_parser::types::Attributes);
 type NodeData = (String, graphviz_dot_parser::types::Attributes);
 
 pub fn handle_plan_snapshot(cmd: &args::PlanCommand) -> Result<(), anyhow::Error> {
-    let content = read_snapshot_file(cmd.id, "edit")?;
+    let content = match read_snapshot_file(cmd.id, "edit") {
+        Ok(v) => v,
+        Err(err) => {
+            log::warn!("failed to find edit snapshot. see error: {:?}", err);
+            log::info!("trying to find post snapshot instead");
+
+            read_snapshot_file(cmd.id, "post.apply").or_error(format!(
+                "failed to find post snapshot. maybe this id {} doesn't exist?.",
+                cmd.id
+            ))?
+        }
+    };
+
     let gv =
         graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
     let (res, _) = create_execution_plan(&gv)?;
