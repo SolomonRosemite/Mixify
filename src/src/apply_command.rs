@@ -550,6 +550,9 @@ pub async fn handle_apply_snapshot(
                             });
                     }
 
+                    // TODO: There is a chance that there are duplicates but of different ids.
+                    // This could happen if the same song is in two albums. (A single and an album for example)
+                    // However the external_ids.isrc field should still match. And used to remove duplicates.
                     let tracks = tracks
                         .into_iter()
                         .collect::<HashSet<_>>()
