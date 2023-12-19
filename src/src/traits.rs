@@ -48,6 +48,7 @@ impl Into<crate::types::Track> for FullTrack {
             name: self.name,
             is_local: self.is_local,
             album_artists_ids: self
+                .album
                 .artists
                 .into_iter()
                 .map(|artist| artist.id.unwrap())
