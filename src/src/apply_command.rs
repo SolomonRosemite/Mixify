@@ -226,6 +226,16 @@ pub async fn handle_apply_snapshot(
                     let mut songs_to_add = local.clone();
                     songs_to_add.retain(|t| !remote.contains(t));
 
+                    // TODO: There is a chance that there are duplicates but of different ids.
+                    // This could happen if the same song is in two albums. (A single and an album for example)
+                    // However the external_ids.isrc field should still match. And used to remove duplicates.
+                    let songs_to_add = songs_to_add
+                        .into_iter()
+                        .collect::<HashSet<_>>()
+                        .into_iter()
+                        .collect::<Vec<_>>();
+
+                    // If we have duplicates, i think we can ignore them.
                     let mut songs_to_remove = remote.clone();
                     songs_to_remove.retain(|t| !local.contains(t));
 
@@ -439,15 +449,6 @@ pub async fn handle_apply_snapshot(
                                 }
                             });
                     }
-
-                    // TODO: There is a chance that there are duplicates but of different ids.
-                    // This could happen if the same song is in two albums. (A single and an album for example)
-                    // However the external_ids.isrc field should still match. And used to remove duplicates.
-                    let tracks = tracks
-                        .into_iter()
-                        .collect::<HashSet<_>>()
-                        .into_iter()
-                        .collect::<Vec<_>>();
 
                     map.insert(to_local(&action.node), tracks);
                 }
