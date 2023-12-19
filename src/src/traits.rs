@@ -47,6 +47,7 @@ impl Into<crate::types::Track> for FullTrack {
             id: self.id,
             name: self.name,
             is_local: self.is_local,
+            artists: self.artists,
             album_artists_ids: self
                 .album
                 .artists

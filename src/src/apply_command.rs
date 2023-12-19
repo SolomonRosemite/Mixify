@@ -602,24 +602,21 @@ fn should_add_song(
     }
 
     let is_main_artist = is_main_artist(&t.album_artists_ids, &artist_id);
-    if !is_main_artist {
+    let is_in_song = t
+        .artists
+        .iter()
+        .any(|a| a.id.clone().unwrap() == *artist_id);
+
+    if !is_main_artist && !is_in_song {
         return None;
     }
 
     let skip: bool = match q.include_features {
-        Some(v) => {
-            if v {
-                if is_main_artist {
-                    true
-                } else {
-                    false
-                }
+        Some(should_not_be_main) => {
+            if should_not_be_main {
+                is_main_artist
             } else {
-                if is_main_artist {
-                    false
-                } else {
-                    true
-                }
+                !is_main_artist
             }
         }
         None => false,
@@ -654,6 +651,7 @@ fn simplified_track_to_track(t: SimplifiedTrack, album: &FullAlbum) -> Track {
         id: t.id,
         name: t.name,
         is_local: t.is_local,
+        artists: t.artists,
         album_artists_ids: album
             .artists
             .iter()

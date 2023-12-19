@@ -1,4 +1,4 @@
-use std::{fs, io};
+use std::{collections::HashMap, fs, io};
 
 use anyhow::anyhow;
 use graphviz_dot_parser::types::{GraphAST, Stmt};
@@ -132,7 +132,8 @@ pub fn create_execution_plan(
     }
 
     let mut all_actions: Vec<Vec<Action>> = Vec::new();
-    let res = create_node_execution_plan(1, &root, &nodes, &edges, &graph)?;
+    let mut memo: Vec<String> = Vec::new();
+    let res = create_node_execution_plan(1, &root, &nodes, &edges, &graph, &mut memo)?;
     all_actions.push(res);
 
     return Ok((all_actions, nodes.clone()));
@@ -144,6 +145,7 @@ fn create_node_execution_plan(
     nodes: &Vec<NodeData>,
     edges: &Vec<EdgeData>,
     graph: &petgraph::Graph<String, ()>,
+    playlists_created_memo: &mut Vec<String>,
 ) -> Result<Vec<Action>, anyhow::Error> {
     let mut actions: Vec<Action> = Vec::new();
 
@@ -174,7 +176,14 @@ fn create_node_execution_plan(
             continue;
         }
 
-        let r = create_node_execution_plan(idx + 1, from_node, nodes, edges, graph)?;
+        let r = create_node_execution_plan(
+            idx + 1,
+            from_node,
+            nodes,
+            edges,
+            graph,
+            playlists_created_memo,
+        )?;
         for action in r {
             actions.push(action);
         }
@@ -189,7 +198,8 @@ fn create_node_execution_plan(
     }
 
     for (n, _, _) in edges_with_subtraction {
-        let r = create_node_execution_plan(idx + 1, &n, nodes, edges, graph)?;
+        let r =
+            create_node_execution_plan(idx + 1, &n, nodes, edges, graph, playlists_created_memo)?;
         for action in r {
             actions.push(action);
         }
@@ -329,21 +339,25 @@ fn create_node_execution_plan(
             });
         }
     } else {
-        actions.push(Action {
-            action_type: ActionType::CreatePlaylist,
-            node: current_node.clone(),
-            idx,
-            for_node: current_node.clone(),
-            playlist_url: None,
-        });
+        if !playlists_created_memo.iter().any(|v| v == current_node) {
+            playlists_created_memo.push(current_node.clone());
 
-        final_node_actions.push(Action {
-            action_type: ActionType::SaveChanges(None),
-            node: current_node.clone(),
-            idx,
-            for_node: current_node.clone(),
-            playlist_url: None,
-        });
+            actions.push(Action {
+                action_type: ActionType::CreatePlaylist,
+                node: current_node.clone(),
+                idx,
+                for_node: current_node.clone(),
+                playlist_url: None,
+            });
+
+            final_node_actions.push(Action {
+                action_type: ActionType::SaveChanges(None),
+                node: current_node.clone(),
+                idx,
+                for_node: current_node.clone(),
+                playlist_url: None,
+            });
+        }
     }
 
     for action in final_node_actions {

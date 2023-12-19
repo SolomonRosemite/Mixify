@@ -1,4 +1,4 @@
-use rspotify::model::{ArtistId, TrackId};
+use rspotify::model::{ArtistId, SimplifiedArtist, TrackId};
 
 impl std::fmt::Display for Action {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -84,4 +84,5 @@ pub struct Track {
     pub id: Option<TrackId<'static>>,
     pub is_local: bool,
     pub name: String,
+    pub artists: Vec<SimplifiedArtist>,
 }
