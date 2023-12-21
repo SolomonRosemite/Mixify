@@ -86,3 +86,10 @@ pub struct Track {
     pub name: String,
     pub artists: Vec<SimplifiedArtist>,
 }
+
+#[derive(Debug, Clone)]
+pub struct TrackTuple {
+    pub id: TrackId<'static>,
+    pub name: String,
+    pub album_name: String,
+}

@@ -12,7 +12,7 @@ use rspotify::{
     AuthCodeSpotify,
 };
 
-use crate::types::{QuerySongsByArtist, Track};
+use crate::types::{QuerySongsByArtist, Track, TrackTuple};
 use crate::{constants, plan_command, traits::ResultExtension, types};
 
 use super::args;
@@ -41,7 +41,7 @@ pub async fn handle_apply_snapshot(
     let (all_actions, nodes) = plan_command::create_execution_plan(&gv)?;
 
     // TODO: For better performance, maybe create a list of tracks and use refs in the map like
-    let mut map: HashMap<String, Vec<TrackId>> = HashMap::new();
+    let mut map: HashMap<String, Vec<TrackTuple>> = HashMap::new();
     let mut node_to_playlist_id: HashMap<String, String> = HashMap::new();
     let mut nodes_with_missing_playlists: Vec<String> = Vec::new();
 
@@ -184,7 +184,11 @@ pub async fn handle_apply_snapshot(
                                         return None;
                                     }
 
-                                    Some(track.id.unwrap())
+                                    Some(TrackTuple {
+                                        id: track.id.unwrap(),
+                                        name: track.name,
+                                        album_name: track.album.name,
+                                    })
                                 }
                                 rspotify::model::PlayableItem::Episode(e) => {
                                     log::warn!("Skipping episode {:?}", e);
@@ -231,6 +235,7 @@ pub async fn handle_apply_snapshot(
                     // However the external_ids.isrc field should still match. And used to remove duplicates.
                     let songs_to_add = songs_to_add
                         .into_iter()
+                        .map(|t| t.id)
                         .collect::<HashSet<_>>()
                         .into_iter()
                         .collect::<Vec<_>>();
@@ -238,6 +243,10 @@ pub async fn handle_apply_snapshot(
                     // If we have duplicates, i think we can ignore them.
                     let mut songs_to_remove = remote.clone();
                     songs_to_remove.retain(|t| !local.contains(t));
+                    let songs_to_remove = songs_to_remove
+                        .into_iter()
+                        .map(|t| t.id)
+                        .collect::<Vec<_>>();
 
                     let playlist_id = node_to_playlist_id.get(&action.node).unwrap();
                     let playlist_id = rspotify::model::PlaylistId::from_id(playlist_id).unwrap();
@@ -322,7 +331,7 @@ pub async fn handle_apply_snapshot(
                     }
 
                     is_cached = true;
-                    let mut tracks = vec![];
+                    let mut tracks: Vec<TrackTuple> = vec![];
 
                     let artist_id =
                         rspotify::model::ArtistId::from_id(q.artist_id.clone()).or_error(
@@ -339,12 +348,18 @@ pub async fn handle_apply_snapshot(
                                 panic!("{}", x);
                             }
 
+                            let name = t.as_ref().unwrap().clone().track.name;
+                            let album_name = t.as_ref().unwrap().clone().track.album.name;
                             let t = t.as_ref().unwrap().clone().track;
 
                             if let Some(id) =
                                 should_add_song(&t.into(), &artist_id, &q, &liked_songs)
                             {
-                                tracks.push(id);
+                                tracks.push(TrackTuple {
+                                    id: id.clone(),
+                                    name,
+                                    album_name,
+                                });
                             }
                         });
                     }
@@ -376,7 +391,11 @@ pub async fn handle_apply_snapshot(
                                     &q,
                                     &liked_songs,
                                 ) {
-                                    tracks.push(id);
+                                    tracks.push(TrackTuple {
+                                        id: id.clone(),
+                                        name: t.name.clone(),
+                                        album_name: a.name.clone(),
+                                    });
                                 }
                             }
                         }
@@ -442,10 +461,17 @@ pub async fn handle_apply_snapshot(
                                 }
                             })
                             .for_each(|t| {
+                                let name = t.name.clone();
+                                let album_name = t.album.name.clone();
+
                                 if let Some(id) =
                                     should_add_song(&t.into(), &artist_id, &q, &liked_songs)
                                 {
-                                    tracks.push(id);
+                                    tracks.push(TrackTuple {
+                                        id: id.clone(),
+                                        album_name,
+                                        name,
+                                    });
                                 }
                             });
                     }
