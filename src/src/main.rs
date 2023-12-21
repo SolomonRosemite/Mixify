@@ -33,6 +33,13 @@ async fn main() {
         }
     };
 
+    let mixstack_suffix = std::env::var("MIXSTACK_SUFFIX").expect("MIXSTACK_SUFFIX not set");
+
+    if mixstack_suffix.is_empty() {
+        log::error!("MIXSTACK_SUFFIX is empty. exiting...");
+        return;
+    }
+
     // create_spotify_token().await;
     // return;
 
@@ -44,7 +51,14 @@ async fn main() {
         args::EntityType::Plan(cmd) => plan_command::handle_plan_snapshot(&cmd),
         args::EntityType::Apply(cmd) | args::EntityType::Sync(cmd) => {
             let is_sync = matches!(args.entity_type, args::EntityType::Sync(_));
-            apply_command::handle_apply_snapshot(&cmd, &spotify, allow_delete, is_sync).await
+            apply_command::handle_apply_snapshot(
+                &cmd,
+                &spotify,
+                allow_delete,
+                mixstack_suffix,
+                is_sync,
+            )
+            .await
         }
     };
 
