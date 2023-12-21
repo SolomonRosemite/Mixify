@@ -91,5 +91,12 @@ pub struct Track {
 pub struct TrackTuple {
     pub id: TrackId<'static>,
     pub name: String,
+    pub artist_id: ArtistId<'static>,
     pub album_name: String,
+}
+
+impl crate::types::TrackTuple {
+    pub fn is_single(&self) -> bool {
+        self.name == self.album_name
+    }
 }

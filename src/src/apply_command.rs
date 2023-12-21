@@ -188,6 +188,7 @@ pub async fn handle_apply_snapshot(
                                         id: track.id.unwrap(),
                                         name: track.name,
                                         album_name: track.album.name,
+                                        artist_id: track.artists[0].id.clone().unwrap(),
                                     })
                                 }
                                 rspotify::model::PlayableItem::Episode(e) => {
@@ -208,14 +209,7 @@ pub async fn handle_apply_snapshot(
                 types::ActionType::CopySongs => {
                     let tracks = map.get(&to_local(&action.node)).unwrap().clone();
                     let target = map.get_mut(&to_local(&action.for_node)).unwrap();
-
-                    for t in &tracks {
-                        if target.contains(t) {
-                            continue;
-                        }
-
-                        target.push(t.clone());
-                    }
+                    target.extend(tracks);
                 }
                 // We dont care if the song was added by the user or the bot we remove it anyway.
                 types::ActionType::RemoveSongs => {
@@ -227,26 +221,23 @@ pub async fn handle_apply_snapshot(
                     let remote = map.get(&action.node).unwrap().clone();
                     let local = map.get_mut(&to_local(&action.for_node)).unwrap();
 
+                    // Remove duplicates. (Including same songs although they may be in different albums)
+                    local.sort_unstable_by_key(|item| (item.name.clone(), !item.is_single()));
+                    local.dedup();
+
                     let mut songs_to_add = local.clone();
                     songs_to_add.retain(|t| !remote.contains(t));
 
-                    // TODO: There is a chance that there are duplicates but of different ids.
-                    // This could happen if the same song is in two albums. (A single and an album for example)
-                    // However the external_ids.isrc field should still match. And used to remove duplicates.
                     let songs_to_add = songs_to_add
                         .into_iter()
                         .map(|t| t.id)
-                        .collect::<HashSet<_>>()
-                        .into_iter()
-                        .collect::<Vec<_>>();
+                        .collect::<HashSet<_>>();
 
-                    // If we have duplicates, i think we can ignore them.
-                    let mut songs_to_remove = remote.clone();
-                    songs_to_remove.retain(|t| !local.contains(t));
-                    let songs_to_remove = songs_to_remove
-                        .into_iter()
-                        .map(|t| t.id)
-                        .collect::<Vec<_>>();
+                    let mut songs_to_remove =
+                        remote.iter().map(|t| t.id.clone()).collect::<Vec<_>>();
+                    let con_local = local.iter().map(|t| t.id.clone()).collect::<Vec<_>>();
+
+                    songs_to_remove.retain(|t| !con_local.contains(t));
 
                     let playlist_id = node_to_playlist_id.get(&action.node).unwrap();
                     let playlist_id = rspotify::model::PlaylistId::from_id(playlist_id).unwrap();
@@ -294,6 +285,7 @@ pub async fn handle_apply_snapshot(
                             .map(|t| PlayableId::Track(t))
                             .collect::<Vec<rspotify::model::PlayableId>>();
 
+                        // TODO: Use playlist_remove_specific_occurrences_of_items instead.
                         log::info!("Removing songs to playlist {:?}", &playlist_id);
                         let res = spotify
                             .playlist_remove_all_occurrences_of_items(playlist_id, ids, None)
@@ -359,6 +351,7 @@ pub async fn handle_apply_snapshot(
                                     id: id.clone(),
                                     name,
                                     album_name,
+                                    artist_id: artist_id.clone(),
                                 });
                             }
                         });
@@ -395,6 +388,7 @@ pub async fn handle_apply_snapshot(
                                         id: id.clone(),
                                         name: t.name.clone(),
                                         album_name: a.name.clone(),
+                                        artist_id: artist_id.clone(),
                                     });
                                 }
                             }
@@ -471,6 +465,7 @@ pub async fn handle_apply_snapshot(
                                         id: id.clone(),
                                         album_name,
                                         name,
+                                        artist_id: artist_id.clone(),
                                     });
                                 }
                             });

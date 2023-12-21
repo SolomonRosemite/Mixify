@@ -60,12 +60,6 @@ impl Into<crate::types::Track> for FullTrack {
 
 impl PartialEq for crate::types::TrackTuple {
     fn eq(&self, other: &Self) -> bool {
-        self.album_name == other.album_name && self.name == other.name
-    }
-}
-
-impl crate::types::TrackTuple {
-    pub fn is_single(&self) -> bool {
-        self.name == self.album_name
+        self.artist_id == other.artist_id && self.name == other.name
     }
 }
