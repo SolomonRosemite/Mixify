@@ -1,10 +1,11 @@
 use std::collections::{HashMap, HashSet};
+use std::time::{Duration, Instant};
 
 use futures_util::stream::StreamExt;
 
 use rspotify::model::{
-    ArtistId, FullAlbum, PlaylistItem, SavedAlbum, SavedTrack, SimplifiedPlaylist, SimplifiedTrack,
-    TrackId,
+    ArtistId, FullAlbum, PlaylistId, PlaylistItem, SavedAlbum, SavedTrack, SimplifiedPlaylist,
+    SimplifiedTrack, TrackId,
 };
 use rspotify::ClientError;
 use rspotify::{
@@ -59,11 +60,11 @@ pub async fn handle_apply_snapshot(
         .await
         .or_error_str("failed to fetch user")?;
 
-    log::info!("------------------");
-    log::info!("list of actions:");
+    log::debug!("------------------");
+    log::debug!("list of actions:");
     for actions in &all_actions {
         for action in actions {
-            log::info!("{}", action);
+            log::debug!("{}", action);
 
             if map.get(&action.node).is_none() {
                 map.insert(action.node.clone(), vec![]);
@@ -78,7 +79,7 @@ pub async fn handle_apply_snapshot(
             }
         }
     }
-    log::info!("------------------");
+    log::debug!("------------------");
 
     for actions in all_actions {
         for action in actions {
@@ -86,7 +87,7 @@ pub async fn handle_apply_snapshot(
                 continue;
             }
 
-            log::info!("Applying action {:?}", action);
+            log::debug!("Applying action {:?}", action);
 
             match action.action_type {
                 types::ActionType::CreatePlaylist => {
@@ -149,8 +150,8 @@ pub async fn handle_apply_snapshot(
                         .unwrap();
 
                     let playlist_id_str = url.split("/").last().unwrap();
-                    let playlist_id = rspotify::model::PlaylistId::from_id(playlist_id_str.clone())
-                        .or_error(format!(
+                    let playlist_id =
+                        PlaylistId::from_id(playlist_id_str.clone()).or_error(format!(
                             "failed to parse playlist id correctly from url {}. the parsed id {}",
                             url.clone(),
                             playlist_id_str
@@ -241,7 +242,7 @@ pub async fn handle_apply_snapshot(
                     songs_to_remove.retain(|t| !con_local.contains(t));
 
                     let playlist_id = node_to_playlist_id.get(&action.node).unwrap();
-                    let playlist_id = rspotify::model::PlaylistId::from_id(playlist_id).unwrap();
+                    let playlist_id = PlaylistId::from_id(playlist_id).unwrap();
 
                     if songs_to_add.len() != 0 {
                         let ids = songs_to_add
@@ -310,13 +311,32 @@ pub async fn handle_apply_snapshot(
                 }
                 types::ActionType::QuerySongsByArtist(q) => {
                     // TODO: Playlists should be cached, on a database or something.
-                    if !is_cached {
-                        let fetched_albums = spotify.current_user_saved_albums(None);
-                        let a = fetched_albums.collect::<Vec<_>>().await;
-                        albums = a;
 
+                    let now = Instant::now();
+                    if !is_cached {
+                        log::info!(
+                            "Fetching all songs from user library. Since there is no cache yet."
+                        );
+                        let now = Instant::now();
+                        let fetched_albums = spotify.current_user_saved_albums(None);
+                        albums = fetched_albums.collect::<Vec<_>>().await;
+                        log::info!("Took {}ms to fetch all albums", now.elapsed().as_millis());
+
+                        let now = Instant::now();
+                        let fetched_liked_songs = spotify.current_user_saved_tracks(None);
+                        liked_songs = fetched_liked_songs.collect::<Vec<_>>().await;
+                        log::info!(
+                            "Took {}ms to fetch all liked songs",
+                            now.elapsed().as_millis()
+                        );
+
+                        let now = Instant::now();
                         let fetched_playlists = spotify.current_user_playlists();
                         let p = fetched_playlists.collect::<Vec<_>>().await;
+                        log::info!(
+                            "Took {}ms to fetch all playlists",
+                            now.elapsed().as_millis()
+                        );
 
                         for p in p {
                             if let Ok(p) = p {
@@ -335,11 +355,9 @@ pub async fn handle_apply_snapshot(
 
                             log::warn!("failed to fetch playlist {}", p.err().unwrap());
                         }
-
-                        let fetched_liked_songs = spotify.current_user_saved_tracks(None);
-                        let ls = fetched_liked_songs.collect::<Vec<_>>().await;
-                        liked_songs = ls;
                     }
+
+                    log::info!("Took {}ms to fetch all songs", now.elapsed().as_millis());
 
                     is_cached = true;
                     let mut tracks: Vec<TrackTuple> = vec![];
@@ -418,42 +436,47 @@ pub async fn handle_apply_snapshot(
                         || *q.source.as_ref().unwrap() == types::QuerySource::Playlists
                     {
                         if !songs_are_cached {
-                            let playlists = playlists
+                            let mut playlists = playlists
                                 .iter()
                                 .map(|p| {
                                     let p = p.clone();
-                                    (p.id, p.name)
+                                    (parse_id_from_playlist_id(&p.id), p.name)
                                 })
                                 .collect::<Vec<_>>();
 
-                            for (id, name) in playlists {
-                                let x = spotify.playlist_items(id, None, None);
-                                let songs = x.collect::<Vec<_>>().await;
+                            let total = Instant::now();
+                            let (success, failed) =
+                                fetch_songs_from_playlists(&spotify, playlists.clone()).await;
+                            all_songs.extend(success);
 
-                                let total_len = songs.len();
+                            playlists.retain(|(id, _)| failed.contains(id));
 
-                                let songs = songs
-                                    .into_iter()
-                                    .filter_map(|r| match r {
-                                        Ok(s) => Some(s),
-                                        Err(e) => {
-                                            log::warn!("failed to fetch song {:?}", e);
-                                            None
-                                        }
-                                    })
-                                    .collect::<Vec<_>>();
-
-                                if total_len != songs.len() {
-                                    log::warn!(
-                                    "Playlist {} has {} songs and {} songs could not be fetched and will be skipped...",
-                                    name,
-                                    songs.len(),
-                                    total_len - songs.len(),
+                            if failed.len() != 0 {
+                                log::warn!(
+                                    "Failed to fetch songs from the {} playlists, {:?}. Trying again in 30s...",
+                                    failed.len(),
+                                    playlists.iter().map(|(_, name)| name.clone()).collect::<Vec<_>>().join(", ")
                                 );
-                                }
 
-                                all_songs.extend(songs);
+                                tokio::time::sleep(Duration::from_secs(30)).await;
+
+                                let (success, failed) =
+                                    fetch_songs_from_playlists(&spotify, playlists.clone()).await;
+                                all_songs.extend(success);
+
+                                playlists.retain(|(id, _)| !failed.contains(id));
+                                if failed.len() != 0 {
+                                    todo!(
+                                        "Failed to fetch songs from {} playlists. Exiting...",
+                                        failed.len()
+                                    );
+                                }
                             }
+
+                            log::info!(
+                                "Took {}s to fetch uncached songs from.",
+                                total.elapsed().as_secs(),
+                            );
                             songs_are_cached = true;
                         }
 
@@ -609,7 +632,7 @@ pub fn create_post_apply_file(
     return Ok(new_content);
 }
 
-fn parse_id_from_playlist_id(playlist_id: &rspotify::model::PlaylistId) -> String {
+fn parse_id_from_playlist_id(playlist_id: &PlaylistId) -> String {
     playlist_id
         .to_string()
         .split(":")
@@ -699,4 +722,151 @@ fn simplified_track_to_track(t: SimplifiedTrack, album: &FullAlbum) -> Track {
             .map(|artist| artist.clone().id.unwrap())
             .collect::<Vec<_>>(),
     }
+}
+
+async fn process_fetch_playlist_songs_chunks(
+    spotify: AuthCodeSpotify,
+    chunks: Vec<(String, String)>,
+) -> (Vec<PlaylistItem>, Vec<String>, usize, usize) {
+    let mut p = Vec::new();
+    let mut failed_req = Vec::new();
+    let mut success = 0;
+    let mut failed = 0;
+
+    for (id, name) in chunks {
+        let songs = fetch_songs_from_playlist(&spotify, id, name).await;
+
+        match songs {
+            Ok(content) => {
+                success += 1;
+                p.extend(content)
+            }
+            Err((err, id)) => {
+                log::warn!(
+                    "Failed to fetch songs from playlist {:?}. Error: {:?}. Sleeping for 10s to prevent rate limit...",
+                    id,
+                    err
+                );
+                failed += 1;
+                tokio::time::sleep(Duration::from_secs(10)).await;
+                failed_req.push(id)
+            }
+        }
+    }
+
+    return (p, failed_req, success, failed);
+}
+
+async fn fetch_songs_from_playlist(
+    spotify: &AuthCodeSpotify,
+    id: String,
+    name: String,
+) -> Result<Vec<PlaylistItem>, (ClientError, String)> {
+    let id = PlaylistId::from_id(id).unwrap();
+
+    let single = Instant::now();
+    let items = spotify.playlist_items(id.clone(), None, None);
+    let songs = items.collect::<Vec<_>>().await;
+
+    if songs.iter().any(|t| t.is_err()) {
+        let err = songs.into_iter().find(|t| t.is_err()).unwrap().unwrap_err();
+        return Err((err, parse_id_from_playlist_id(&id)));
+    }
+
+    log::info!(
+        "Took {}ms to fetch songs from playlist {}",
+        single.elapsed().as_millis(),
+        name
+    );
+
+    let total_len = songs.len();
+    let songs = songs
+        .into_iter()
+        .filter_map(|r| match r {
+            Ok(s) => Some(s),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    if total_len != songs.len() {
+        log::warn!(
+            "Playlist {} has {} songs and {} songs could not be fetched and will be skipped...",
+            name,
+            songs.len(),
+            total_len - songs.len()
+        );
+    }
+
+    Ok(songs)
+}
+
+async fn fetch_songs_from_playlists(
+    spotify: &AuthCodeSpotify,
+    playlists: Vec<(String, String)>,
+) -> (Vec<PlaylistItem>, Vec<String>) {
+    let total = Instant::now();
+
+    let num_of_playlists = playlists.len();
+    let chunks: Vec<Vec<_>> = playlists
+        .clone()
+        .chunks(num_of_playlists / 5)
+        .into_iter()
+        .map(|chunk| chunk.clone().to_vec())
+        .collect();
+
+    let chunks = chunks.clone();
+
+    log::info!(
+        "Starting to fetch songs from spotify. Ids {:?}.",
+        playlists
+            .into_iter()
+            .map(|e| e.0)
+            .collect::<Vec<String>>()
+            .join(", "),
+    );
+
+    log::info!(
+        "Splitting {} playlists into {} chunks",
+        num_of_playlists,
+        chunks.len()
+    );
+
+    let mut handles = Vec::new();
+    for chunk in chunks {
+        log::info!("Spawning thread to fetch {} playlists", chunk.len());
+        handles.push(tokio::spawn(process_fetch_playlist_songs_chunks(
+            spotify.clone(),
+            chunk,
+        )));
+    }
+
+    let mut success = vec![];
+    let mut failed = vec![];
+    let mut num_of_success = 0;
+    let mut num_of_failure = 0;
+    for handle in handles {
+        let res = handle.await.unwrap();
+
+        match res {
+            (p, f, ns, nf) => {
+                num_of_success += ns;
+                num_of_failure += nf;
+
+                success.extend(p);
+                failed.extend(f);
+            }
+        }
+    }
+
+    let total_len = num_of_failure + num_of_success;
+    log::info!(
+        "Took {}s to fetch songs. Total num of playlists: {:?} of which {} failed and {} succeeded. Success rate: {}%",
+        total.elapsed().as_secs(),
+        total_len,
+        num_of_failure,
+        num_of_success,
+        (num_of_success as f32 / total_len as f32) * 100.0
+    );
+
+    return (success, failed);
 }
