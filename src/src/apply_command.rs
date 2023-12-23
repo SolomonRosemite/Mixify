@@ -467,9 +467,14 @@ pub async fn handle_apply_snapshot(
 
                                 playlists.retain(|(id, _)| !failed.contains(id));
                                 if failed.len() != 0 {
-                                    todo!(
-                                        "Failed to fetch songs from {} playlists. Exiting...",
-                                        failed.len()
+                                    log::warn!(
+                                        "Failed to fetch songs from the {} playlists, {:?}.",
+                                        failed.len(),
+                                        playlists
+                                            .iter()
+                                            .map(|(_, name)| name.clone())
+                                            .collect::<Vec<_>>()
+                                            .join(", ")
                                     );
                                 }
                             }
