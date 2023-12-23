@@ -311,6 +311,7 @@ pub async fn handle_apply_snapshot(
                 }
                 types::ActionType::QuerySongsByArtist(q) => {
                     // TODO: Playlists should be cached, on a database or something.
+                    // TODO: Backup before starting to apply the snapshot. (Backup songs for each playlist).
 
                     let now = Instant::now();
                     if !is_cached {
