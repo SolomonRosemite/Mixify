@@ -97,6 +97,8 @@ pub async fn handle_apply_snapshot(
                         .unwrap();
                     let nei = graph.neighbors_directed(node_index, petgraph::Direction::Incoming);
                     let names = nei.map(|i| graph[i].clone()).collect::<Vec<String>>();
+                    // TODO: Description should only be set if wanted. (Set in the env file)
+                    // TODO: If the playlists does not have children, remomve the list of names from the description.
                     let description = format!(
                         "Generated mixstack using mixify. This playlist consists of: {}.",
                         names.join(", ")
