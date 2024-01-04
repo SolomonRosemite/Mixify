@@ -229,6 +229,7 @@ pub async fn handle_apply_snapshot(
                     local.sort_unstable_by_key(|item| (item.name.clone(), !item.is_single()));
                     local.dedup();
 
+                    // TODO: Sort by artist id and than by album.
                     let mut songs_to_add = local.clone();
                     songs_to_add.retain(|t| !remote.contains(t));
 
