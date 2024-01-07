@@ -9,6 +9,8 @@ mod types;
 use clap::Parser;
 use dotenv::dotenv;
 use rspotify::{prelude::*, scopes, AuthCodeSpotify, Credentials, OAuth};
+use traits::ResultExtension;
+use types::Config;
 
 use crate::args::MixifyArgs;
 
@@ -21,24 +23,13 @@ async fn main() {
     builder.filter(Some("rspotify_http"), log::LevelFilter::Off);
     builder.init();
 
-    let allow_removing_songs =
-        std::env::var("ALLOW_REMOVING_SONGS").expect("ALLOW_REMOVING_SONGS not set");
-
-    let allow_delete = match allow_removing_songs.as_str() {
-        "true" => true,
-        "false" => false,
-        _ => {
-            log::error!("ALLOW_REMOVING_SONGS is not set to true or false. exiting...");
+    let config = match parse_config() {
+        Ok(c) => c,
+        Err(e) => {
+            log::error!("Following error occured when parsing config: {}", e);
             return;
         }
     };
-
-    let mixstack_suffix = std::env::var("MIXSTACK_SUFFIX").expect("MIXSTACK_SUFFIX not set");
-
-    if mixstack_suffix.is_empty() {
-        log::error!("MIXSTACK_SUFFIX is empty. exiting...");
-        return;
-    }
 
     // create_spotify_token().await;
     // return;
@@ -51,14 +42,7 @@ async fn main() {
         args::EntityType::Plan(cmd) => plan_command::handle_plan_snapshot(&cmd),
         args::EntityType::Apply(cmd) | args::EntityType::Sync(cmd) => {
             let is_sync = matches!(args.entity_type, args::EntityType::Sync(_));
-            apply_command::handle_apply_snapshot(
-                &cmd,
-                &spotify,
-                allow_delete,
-                mixstack_suffix,
-                is_sync,
-            )
-            .await
+            apply_command::handle_apply_snapshot(&cmd, &spotify, config, is_sync).await
         }
     };
 
@@ -122,6 +106,44 @@ fn create_client_from_token() -> AuthCodeSpotify {
     };
 
     return rspotify::AuthCodeSpotify::from_token(token);
+}
+
+fn parse_config() -> Result<Config, anyhow::Error> {
+    let allow_removing_songs = std::env::var("ALLOW_REMOVING_SONGS")
+        .or_error_str("ALLOW_REMOVING_SONGS env var not set")?;
+
+    let allow_removing_songs = match allow_removing_songs.as_str() {
+        "true" => true,
+        "false" => false,
+        _ => {
+            return Err(anyhow::anyhow!(format!(
+                "Invalid value for ALLOW_REMOVING_SONGS. Expected 'true' or 'false' but got '{}'",
+                allow_removing_songs
+            )))
+        }
+    };
+
+    let mixstack_suffix =
+        std::env::var("MIXSTACK_SUFFIX").or_error_str("MIXSTACK_SUFFIX env var not set")?;
+    let write_description = std::env::var("CREATE_PLAYLIST_DESCRIPTION")
+        .or_error_str("CREATE_PLAYLIST_DESCRIPTION env var not set")?;
+
+    let write_description = match write_description.as_str() {
+        "true" => true,
+        "false" => false,
+        _ => {
+            return Err(anyhow::anyhow!(format!(
+                "Invalid value for CREATE_PLAYLIST_DESCRIPTION. Expected 'true' or 'false' but got '{}'",
+                allow_removing_songs
+            )))
+        }
+    };
+
+    return Ok(Config {
+        allow_removing_songs,
+        mixstack_suffix,
+        write_description,
+    });
 }
 
 fn _test(id: u32) -> Result<(), anyhow::Error> {

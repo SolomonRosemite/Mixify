@@ -100,3 +100,10 @@ impl crate::types::TrackTuple {
         self.name == self.album_name
     }
 }
+
+#[derive(Debug)]
+pub struct Config {
+    pub allow_removing_songs: bool,
+    pub mixstack_suffix: String,
+    pub write_description: bool,
+}
