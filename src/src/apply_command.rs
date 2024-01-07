@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::time::{Duration, Instant};
+use std::vec;
 
 use futures_util::stream::StreamExt;
 
@@ -229,14 +230,19 @@ pub async fn handle_apply_snapshot(
                     local.sort_unstable_by_key(|item| (item.name.clone(), !item.is_single()));
                     local.dedup();
 
-                    // TODO: Sort by artist id and than by album.
                     let mut songs_to_add = local.clone();
                     songs_to_add.retain(|t| !remote.contains(t));
+                    songs_to_add.sort_unstable_by_key(|item| {
+                        (item.artist_id.to_string(), item.album_name.clone())
+                    });
 
-                    let songs_to_add = songs_to_add
-                        .into_iter()
-                        .map(|t| t.id)
-                        .collect::<HashSet<_>>();
+                    // NOTE: Hashset can't be used because it would change the order.
+                    let mut song_ids_to_add = vec![];
+                    for song in songs_to_add {
+                        if !song_ids_to_add.contains(&song.id) {
+                            song_ids_to_add.push(song.id);
+                        }
+                    }
 
                     let mut songs_to_remove =
                         remote.iter().map(|t| t.id.clone()).collect::<Vec<_>>();
@@ -247,8 +253,8 @@ pub async fn handle_apply_snapshot(
                     let playlist_id = node_to_playlist_id.get(&action.node).unwrap();
                     let playlist_id = PlaylistId::from_id(playlist_id).unwrap();
 
-                    if songs_to_add.len() != 0 {
-                        let ids = songs_to_add
+                    if song_ids_to_add.len() != 0 {
+                        let ids = song_ids_to_add
                             .into_iter()
                             .map(|t| PlayableId::Track(t))
                             .collect::<Vec<rspotify::model::PlayableId>>();
