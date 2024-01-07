@@ -816,9 +816,14 @@ async fn fetch_songs_from_playlists(
     let total = Instant::now();
 
     let num_of_playlists = playlists.len();
+    let chunk_size = match num_of_playlists / 5 {
+        0 => 1,
+        _ => num_of_playlists / 5,
+    };
+
     let chunks: Vec<Vec<_>> = playlists
         .clone()
-        .chunks(num_of_playlists / 5)
+        .chunks(chunk_size)
         .into_iter()
         .map(|chunk| chunk.clone().to_vec())
         .collect();
