@@ -3,7 +3,13 @@ name = "mixify"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "mixify"
+path = "src/main.rs"
+
+[[bin]]
+name = "server"
+path = "src/server.rs"
 
 [dependencies]
 anyhow = "1.0.71"
@@ -20,6 +26,10 @@ dotenv = "0.15.0"
 pretty_env_logger = "0.5.0"
 async-stream = "0.3.5"
 futures-util = "0.3.29"
+prost = "0.12.3"
+tonic = "0.10.2"
+tonic-build = "0.10.2"
+tonic-reflection = "0.10.2"
 
-[dev-dependencies]
-tokio = "1.28.1"
+[build-dependencies]
+tonic-build = "0.10.2"
