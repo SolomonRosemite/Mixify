@@ -1,52 +1,46 @@
-use std::{fs, io};
+use std::{collections::HashMap, fs, io};
 
-use anyhow::{anyhow, Ok};
+use anyhow::anyhow;
 use graphviz_dot_parser::types::{GraphAST, Stmt};
 use url::Url;
 
-use crate::{constants, traits::ResultExtension};
+use crate::{
+    constants,
+    traits::ResultExtension,
+    types::{Action, ActionType, QuerySongsByArtist, QuerySource},
+};
 
 use super::args;
 
 type EdgeData = (String, String, graphviz_dot_parser::types::Attributes);
 type NodeData = (String, graphviz_dot_parser::types::Attributes);
 
-#[derive(Debug)]
-pub struct Action {
-    pub action_type: ActionType,
-    pub node: String,
-    pub for_node: String,
-    pub idx: usize,
-    pub playlist_url: Option<String>,
-}
-
-impl std::fmt::Display for Action {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{:?} from {} for/to {} and idx is {}",
-            self.action_type, self.node, self.for_node, self.idx
-        )
-    }
-}
-
-// TODO: Add support for artist query.
-#[derive(Debug)]
-pub enum ActionType {
-    CreatePlaylist,
-    QuerySongsAndSaveChanges(Option<String>),
-    CopySongs,
-    RemoveSongs,
-}
-
 pub fn handle_plan_snapshot(cmd: &args::PlanCommand) -> Result<(), anyhow::Error> {
-    let content = read_snapshot_file(cmd.id, "edit")?;
+    let content = match read_snapshot_file(cmd.id, "edit") {
+        Ok(v) => v,
+        Err(err) => {
+            log::warn!("failed to find edit snapshot. see error: {:?}", err);
+            log::info!("trying to find post snapshot instead");
+
+            read_snapshot_file(cmd.id, "post.apply").or_error(format!(
+                "failed to find post snapshot. maybe this id {} doesn't exist?.",
+                cmd.id
+            ))?
+        }
+    };
+
     let gv =
         graphviz_dot_parser::parse(&content).or_error(String::from("failed to parse graph"))?;
-    let res = create_execution_plan(&gv)?;
+    let (res, _) = create_execution_plan(&gv)?;
 
     for actions in res {
+        let mut idx = 0;
         for action in actions {
+            if idx != action.idx {
+                log::info!("------------------------------------");
+                idx = action.idx;
+            }
+
             log::info!("{}", action);
         }
     }
@@ -54,7 +48,9 @@ pub fn handle_plan_snapshot(cmd: &args::PlanCommand) -> Result<(), anyhow::Error
     return Ok(());
 }
 
-pub fn create_execution_plan(gv: &GraphAST) -> Result<Vec<Vec<Action>>, anyhow::Error> {
+pub fn create_execution_plan(
+    gv: &GraphAST,
+) -> Result<(Vec<Vec<Action>>, Vec<NodeData>), anyhow::Error> {
     let mixify_root_node = (
         constants::MIXIFY_TEMPORARY_ROOT_NODE_NAME.to_string(),
         vec![],
@@ -88,17 +84,23 @@ pub fn create_execution_plan(gv: &GraphAST) -> Result<Vec<Vec<Action>>, anyhow::
                 root_nodes.push(node.to_string());
             }
 
-            // All base nodes should have a spotify url attribute.
+            // Base nodes, that are not of type query, should have a spotify url attribute.
             if number_of_incoming_edges == 0 && number_of_outgoing_edges > 0 {
                 let attr = attrs
                     .iter()
                     .find(|(k, _)| k == constants::URL_ATTRIBUTE_KEY);
 
                 if attr.is_none() {
-                    error = Some(anyhow!(
-                        "Node {:?} is a base node and should have a spotify url attribute",
-                        node
-                    ));
+                    let is_query = attr
+                        .iter()
+                        .any(|(k, v)| k == constants::TYPE_ATTRIBUTE_KEY && v == "query");
+
+                    if is_query {
+                        error = Some(anyhow!(
+                            "Node {:?} is a base node and should have a spotify url attribute",
+                            node
+                        ));
+                    }
                 } else {
                     let (_, url) = attr.unwrap();
                     let _ = Url::parse(url).expect(&format!(
@@ -130,32 +132,39 @@ pub fn create_execution_plan(gv: &GraphAST) -> Result<Vec<Vec<Action>>, anyhow::
     }
 
     let mut all_actions: Vec<Vec<Action>> = Vec::new();
-    let res = create_node_execution_plan(1, &root, &nodes, &edges, &graph);
+    let mut memo: Vec<String> = Vec::new();
+    let res = create_node_execution_plan(1, &root, &nodes, &edges, &graph, &mut memo)?;
     all_actions.push(res);
 
-    return Ok(all_actions);
+    return Ok((all_actions, nodes.clone()));
 }
 
 fn create_node_execution_plan(
     idx: usize,
-    node: &String,
+    current_node: &String,
     nodes: &Vec<NodeData>,
     edges: &Vec<EdgeData>,
     graph: &petgraph::Graph<String, ()>,
-) -> Vec<Action> {
+    playlists_created_memo: &mut Vec<String>,
+) -> Result<Vec<Action>, anyhow::Error> {
     let mut actions: Vec<Action> = Vec::new();
 
-    let node_index = graph.node_indices().find(|i| graph[*i] == *node).unwrap();
+    let node_index = graph
+        .node_indices()
+        .find(|i| graph[*i] == *current_node)
+        .unwrap();
     let nei = graph.neighbors_directed(node_index, petgraph::Direction::Incoming);
     let names = nei.map(|i| graph[i].clone()).collect::<Vec<String>>();
+    let has_neighbors = names.len() > 0;
 
     let mut edges_with_subtraction: Vec<&EdgeData> = Vec::new();
+    let mut is_query_node = false;
 
     let mut final_node_actions: Vec<Action> = Vec::new();
-    for n in names {
+    for from_node in &names {
         let subtraction_edge = edges.iter().find(|(from, to, attr)| {
-            *from == *n
-                && *to == *node
+            *from == *from_node
+                && *to == *current_node
                 && attr
                     .iter()
                     .any(|(k, v)| k == constants::SUBTRACT_ATTRIBUTE_KEY && v == "true")
@@ -167,30 +176,30 @@ fn create_node_execution_plan(
             continue;
         }
 
-        let r = create_node_execution_plan(idx + 1, &n, nodes, edges, graph);
+        let r = create_node_execution_plan(
+            idx + 1,
+            from_node,
+            nodes,
+            edges,
+            graph,
+            playlists_created_memo,
+        )?;
         for action in r {
             actions.push(action);
         }
 
         final_node_actions.push(Action {
             action_type: ActionType::CopySongs,
-            playlist_url: get_playlist_url(nodes, &n),
-            node: n,
+            playlist_url: get_playlist_url(nodes, from_node),
+            node: from_node.to_string(),
             idx,
-            for_node: node.clone(),
-        });
-        let p = get_playlist_url(nodes, &node);
-        final_node_actions.push(Action {
-            action_type: ActionType::QuerySongsAndSaveChanges(p.clone()),
-            playlist_url: p,
-            node: node.clone(),
-            idx,
-            for_node: node.clone(),
+            for_node: current_node.clone(),
         });
     }
 
     for (n, _, _) in edges_with_subtraction {
-        let r = create_node_execution_plan(idx + 1, &n, nodes, edges, graph);
+        let r =
+            create_node_execution_plan(idx + 1, &n, nodes, edges, graph, playlists_created_memo)?;
         for action in r {
             actions.push(action);
         }
@@ -199,43 +208,163 @@ fn create_node_execution_plan(
             action_type: ActionType::RemoveSongs,
             node: n.clone(),
             idx,
-            for_node: node.clone(),
+            for_node: current_node.clone(),
             playlist_url: get_playlist_url(nodes, n),
         };
         final_node_actions.push(action);
     }
 
-    let (_, attr) = nodes.iter().find(|(name, _)| *name == *node).unwrap();
+    let (_, attr) = nodes
+        .iter()
+        .find(|(name, _)| *name == *current_node)
+        .unwrap();
     let playlist_already_exists = attr.iter().find(|(k, _)| k == constants::URL_ATTRIBUTE_KEY);
 
-    let mut action: Option<Action> = None;
+    if !has_neighbors {
+        let is_query = attr
+            .iter()
+            .any(|(k, v)| k == constants::TYPE_ATTRIBUTE_KEY && v == "query");
+
+        if !is_query {
+            if playlist_already_exists.is_none() {
+                return Err(anyhow!(
+                    "Node {:?} is a base node and should have a spotify url attribute",
+                    current_node
+                ));
+            }
+        } else {
+            let must_be_liked = attr
+                .iter()
+                .find(|(k, _)| k == constants::MUST_BE_LIKED_ATTRIBUTE_KEY)
+                .map(|(_, v)| v.as_str().parse::<bool>());
+
+            let must_be_liked = match must_be_liked {
+                Some(Ok(v)) => Some(v),
+                Some(Err(e)) => {
+                    return Err(anyhow!(
+                        "Failed to parse must_be_liked attribute of node {:?} with error: {:?}",
+                        current_node,
+                        e
+                    ));
+                }
+                None => None,
+            };
+
+            let artist_id = attr
+                .iter()
+                .find(|(k, _)| k == constants::ARTIST_ID_ATTRIBUTE_KEY)
+                .map(|(_, v)| v.clone());
+
+            let artist_id = match artist_id {
+                Some(v) => v,
+                None => {
+                    return Err(anyhow!(
+                        "Node {:?} is a query node and should have a artist_id attribute",
+                        current_node
+                    ));
+                }
+            };
+
+            let include_features = attr
+                .iter()
+                .find(|(k, _)| k == constants::INCLUDE_FEATURES_ATTRIBUTE_KEY)
+                .map(|(_, v)| v.as_str().parse::<bool>());
+
+            let include_features = match include_features {
+                Some(Ok(v)) => Some(v),
+                Some(Err(e)) => {
+                    return Err(anyhow!(
+                        "Failed to parse include_features attribute of node {:?} with error: {:?}",
+                        current_node,
+                        e
+                    ));
+                }
+                None => None,
+            };
+
+            let source = attr
+                .iter()
+                .find(|(k, _)| k == constants::SOURCE_ATTRIBUTE_KEY)
+                .map(|(_, v)| v.as_str().parse::<QuerySource>());
+
+            let source = match source {
+                Some(Ok(v)) => Some(v),
+                Some(Err(e)) => {
+                    return Err(anyhow!(
+                        "Failed to parse source attribute of node {:?} with error: {:?}",
+                        current_node,
+                        e
+                    ));
+                }
+                None => None,
+            };
+
+            let query = QuerySongsByArtist {
+                artist_id,
+                include_features,
+                source,
+                must_be_liked,
+            };
+
+            let url = playlist_already_exists.map(|(_, url)| url.clone());
+            final_node_actions.push(Action {
+                action_type: ActionType::QuerySongsByArtist(query),
+                node: current_node.clone(),
+                idx,
+                for_node: current_node.clone(),
+                playlist_url: url.clone(),
+            });
+
+            is_query_node = true;
+        }
+    }
+
     if let Some((_, url)) = playlist_already_exists {
-        action = Some(Action {
-            action_type: ActionType::QuerySongsAndSaveChanges(Some(url.clone())),
-            node: node.clone(),
+        // We always query because we want the latest state of the playlist.
+        final_node_actions.push(Action {
+            action_type: ActionType::QuerySongs(Some(url.clone())),
+            node: current_node.clone(),
             idx,
-            for_node: node.clone(),
+            for_node: current_node.clone(),
             playlist_url: Some(url.clone()),
         });
+
+        if has_neighbors || is_query_node {
+            final_node_actions.push(Action {
+                action_type: ActionType::SaveChanges(Some(url.clone())),
+                node: current_node.clone(),
+                idx,
+                for_node: current_node.clone(),
+                playlist_url: Some(url.clone()),
+            });
+        }
     } else {
-        actions.push(Action {
-            action_type: ActionType::CreatePlaylist,
-            node: node.clone(),
-            idx,
-            for_node: node.clone(),
-            playlist_url: None,
-        });
+        if !playlists_created_memo.iter().any(|v| v == current_node) {
+            playlists_created_memo.push(current_node.clone());
+
+            actions.push(Action {
+                action_type: ActionType::CreatePlaylist,
+                node: current_node.clone(),
+                idx,
+                for_node: current_node.clone(),
+                playlist_url: None,
+            });
+
+            final_node_actions.push(Action {
+                action_type: ActionType::SaveChanges(None),
+                node: current_node.clone(),
+                idx,
+                for_node: current_node.clone(),
+                playlist_url: None,
+            });
+        }
     }
 
     for action in final_node_actions {
         actions.push(action);
     }
 
-    if let Some(action) = action {
-        actions.push(action);
-    }
-
-    return actions;
+    return Ok(actions);
 }
 
 fn validate_graph(graph: &GraphAST) -> Result<(), anyhow::Error> {
