@@ -1078,6 +1078,7 @@ dependencies = [
  "env_logger 0.9.3",
  "futures-util",
  "graphviz-dot-parser",
+ "lazy_static",
  "log",
  "petgraph 0.5.1",
  "pretty_env_logger",

@@ -2,15 +2,28 @@ syntax = "proto3";
 package mixify;
 
 service Mixify {
-    rpc Plan(SnapshotRequest) returns (OutputResponse) {}
+    rpc AuthState(Empty) returns (AuthStateResponse) {}
+    rpc CreateToken(Empty) returns (CreateTokenResponse) {}
+
+    rpc Plan(SnapshotRequest) returns (stream OutputResponse) {}
     rpc Apply(SnapshotRequest) returns (OutputResponse) {}
     rpc Sync(SnapshotRequest) returns (OutputResponse) {}
 }
 
-message SnapshotRequest {
-    string snapshot_content = 1;
+message Empty {}
+
+enum LoginStatus {
+    LOGGED_IN = 0;
+    NOT_LOGGED_IN = 1;
 }
 
-message OutputResponse {
-    string output = 1;
+message SnapshotRequest { string snapshot_content = 1; }
+
+message OutputResponse { string output = 1; }
+
+message AuthStateResponse {
+    LoginStatus status = 1;
+    optional string user_display_name = 2;
 }
+
+message CreateTokenResponse { string url = 1; }

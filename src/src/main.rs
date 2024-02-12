@@ -31,7 +31,7 @@ async fn main() {
         }
     };
 
-    // create_spotify_token().await;
+    create_spotify_token().await;
     // return;
 
     let spotify = create_client_from_token();

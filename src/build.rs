@@ -5,6 +5,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         PathBuf::from(env::var("OUT_DIR").unwrap()).join("service_descriptor.bin");
     tonic_build::configure()
         .file_descriptor_set_path(&descriptor_path)
+        .out_dir("src/proto")
         .compile(&["proto/service.proto"], &["proto/"])?;
 
     Ok(())
