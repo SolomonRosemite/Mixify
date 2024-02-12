@@ -20,7 +20,7 @@ async fn main() {
 
     let mut builder = pretty_env_logger::env_logger::Builder::from_default_env();
     builder.target(pretty_env_logger::env_logger::Target::Stdout);
-    builder.filter(Some("rspotify_http"), log::LevelFilter::Off);
+    builder.filter(Some("rspotify"), log::LevelFilter::Off);
     builder.init();
 
     let config = match parse_config() {
@@ -31,10 +31,14 @@ async fn main() {
         }
     };
 
-    // create_spotify_token().await;
-    // return;
-
-    let spotify = create_client_from_token();
+    let spotify: AuthCodeSpotify;
+    if cfg!(debug_assertions) {
+        create_and_print_token().await;
+        // return;
+        spotify = create_client_from_token();
+    } else {
+        spotify = create_spotify_token().await;
+    }
 
     let args = MixifyArgs::parse();
     let data = match &args.entity_type {
@@ -56,11 +60,25 @@ async fn main() {
     }
 }
 
-async fn create_spotify_token() {
+async fn create_and_print_token() {
+    let spotify = create_spotify_token().await;
+    let token = spotify.get_token();
+    let idk = token.lock().await;
+    let mut x = idk.unwrap();
+    let y = x.take();
+    let z = y.unwrap().access_token;
+    println!("{:?}", z);
+
+    std::env::set_var("TEST_TOKEN", z);
+}
+
+async fn create_spotify_token() -> AuthCodeSpotify {
     let creds = Credentials::from_env().unwrap();
+    let redirect_uri =
+        std::env::var("RSPOTIFY_REDIRECT_URI").expect("RSPOTIFY_REDIRECT_URI env var not set");
 
     let oauth = OAuth {
-        redirect_uri: "http://localhost:8080/callback".to_string(),
+        redirect_uri,
         scopes: scopes!(
             "playlist-modify-public",
             "playlist-modify-private",
@@ -75,17 +93,15 @@ async fn create_spotify_token() {
     };
     let spotify = AuthCodeSpotify::new(creds, oauth);
 
-    let url = spotify.get_authorize_url(true).unwrap();
-    spotify.prompt_for_token(&url).await.unwrap();
+    let url = spotify
+        .get_authorize_url(true)
+        .expect("Failed to get create url for user authentication. This should never happen. Make sure the spotify credentials are set correctly in the .env file.");
+    spotify
+        .prompt_for_token(&url)
+        .await
+        .expect("Failed to prompt for token");
 
-    let token = spotify.get_token();
-    let idk = token.lock().await;
-    let mut x = idk.unwrap();
-    let y = x.take();
-    let z = y.unwrap().access_token;
-    println!("{:?}", z);
-
-    std::env::set_var("TEST_TOKEN", z);
+    return spotify;
 }
 
 fn create_client_from_token() -> AuthCodeSpotify {
