@@ -10,8 +10,8 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - name: Build
-      run: cd src && cargo test --verbose
+      run: cd src && cargo build --release --bin mixify
     - uses: actions/upload-artifact@v4
       with:
         name: artifacts
-        path: ./
+        path: target/release/mixify
