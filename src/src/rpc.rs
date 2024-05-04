@@ -1,14 +1,14 @@
-use rspotify::clients::OAuthClient;
-use service::mixify_server::Mixify;
-
-use crate::{traits::OptionExtension, types::Config};
-
 pub mod service {
     include!("proto/mixify.rs");
 
     pub(crate) const FILE_DESCRIPTOR_SET: &[u8] =
         tonic::include_file_descriptor_set!("service_descriptor");
 }
+
+use rspotify::clients::OAuthClient;
+use service::mixify_server::Mixify;
+
+use crate::{traits::OptionExtension, types::Config};
 
 #[derive(Debug)]
 pub struct Service {
@@ -54,6 +54,8 @@ impl Mixify for Service {
             }
         };
     }
+
+    type PlanStream = tonic::codec::Streaming<service::OutputResponse>;
 
     async fn plan(
         &self,
