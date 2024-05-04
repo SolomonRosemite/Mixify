@@ -6,13 +6,13 @@ use chrono::prelude::*;
 pub fn handle_new_snapshot(cmd: &args::NewCommand) -> Result<(), anyhow::Error> {
     let (content, id) = get_latest_snapshot_or_default(cmd.name.clone())?;
 
-    let file_name = format!("snapshots/{}/{}_{}.edit.gv", id, id, cmd.name);
-    let snapshot_folder_name = format!("snapshots/{}/{}", id, id);
+    let file_name = format!("src_snapshots/{}/{}_{}.edit.gv", id, id, cmd.name);
+    let snapshot_folder_name = format!("src_snapshots/{}/{}", id, id);
 
     let file_err = format!("Failed to write to file: {}", file_name);
     let folder_err = format!("Failed to create snapshot folder: {}", snapshot_folder_name);
 
-    std::fs::create_dir_all(format!("snapshots/{}", id)).expect(&folder_err);
+    std::fs::create_dir_all(format!("src_snapshots/{}", id)).expect(&folder_err);
     std::fs::write(&file_name, content).expect(&file_err);
 
     println!("Created snapshot: {}!", &file_name);
@@ -20,8 +20,8 @@ pub fn handle_new_snapshot(cmd: &args::NewCommand) -> Result<(), anyhow::Error> 
 }
 
 fn get_latest_snapshot_or_default(name: String) -> Result<(String, u32), anyhow::Error> {
-    std::fs::create_dir_all("snapshots/").unwrap();
-    let found_dirs: Vec<_> = std::fs::read_dir("snapshots/").unwrap().collect();
+    std::fs::create_dir_all("src_snapshots/").unwrap();
+    let found_dirs: Vec<_> = std::fs::read_dir("src_snapshots/").unwrap().collect();
 
     found_dirs
         .iter()

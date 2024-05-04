@@ -13,7 +13,7 @@ target/
 .env
 
 # Generated snapshots
-snapshots/
+src_snapshots/
 
 # Generated proto files
 src/proto

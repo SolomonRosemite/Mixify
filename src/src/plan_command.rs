@@ -402,7 +402,7 @@ fn validate_graph(graph: &GraphAST) -> Result<(), anyhow::Error> {
 pub fn read_snapshot_file(id: u32, suffix: &str) -> Result<String, anyhow::Error> {
     let data = list_snapshot_content(id, suffix)?;
 
-    let directory_path = format!("snapshots/{}/", id);
+    let directory_path = format!("src_snapshots/{}/", id);
     if data.len() == 0 {
         return Err(anyhow::anyhow!(
             "No *.{}.gv file found in {} folder",
@@ -441,7 +441,7 @@ pub fn list_snapshot_files(
     id: u32,
     suffix: &str,
 ) -> Result<Vec<std::path::PathBuf>, anyhow::Error> {
-    let directory_path = format!("snapshots/{}/", id);
+    let directory_path = format!("src_snapshots/{}/", id);
     log::info!(
         "checking directory: {} for *.{}.gv snapshot",
         directory_path,
