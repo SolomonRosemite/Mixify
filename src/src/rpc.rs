@@ -5,8 +5,11 @@ pub mod service {
         tonic::include_file_descriptor_set!("service_descriptor");
 }
 
+use std::result::Result;
+
 use rspotify::clients::OAuthClient;
 use service::mixify_server::Mixify;
+use tonic::{Request, Response};
 
 use crate::{traits::OptionExtension, types::Config};
 
@@ -20,18 +23,18 @@ pub struct Service {
 impl Mixify for Service {
     async fn auth_state(
         &self,
-        _: tonic::Request<service::Empty>,
-    ) -> std::result::Result<tonic::Response<service::AuthStateResponse>, tonic::Status> {
+        _: Request<service::Empty>,
+    ) -> Result<Response<service::AuthStateResponse>, tonic::Status> {
         let state = self.auth_state().await;
 
         if state.is_err() || !state.as_ref().unwrap().0 {
-            return Ok(tonic::Response::new(service::AuthStateResponse {
+            return Ok(Response::new(service::AuthStateResponse {
                 status: service::LoginStatus::NotLoggedIn.into(),
                 user_display_name: None,
             }));
         }
 
-        Ok(tonic::Response::new(service::AuthStateResponse {
+        Ok(Response::new(service::AuthStateResponse {
             status: service::LoginStatus::LoggedIn.into(),
             user_display_name: state.unwrap().1,
         }))
@@ -39,12 +42,12 @@ impl Mixify for Service {
 
     async fn create_token(
         &self,
-        _: tonic::Request<service::Empty>,
-    ) -> std::result::Result<tonic::Response<service::CreateTokenResponse>, tonic::Status> {
+        _: Request<service::Empty>,
+    ) -> Result<Response<service::CreateTokenResponse>, tonic::Status> {
         return match self.spotify.get_authorize_url(false) {
             Ok(url) => {
                 log::info!("Created token auth url: {}", url);
-                Ok(tonic::Response::new(service::CreateTokenResponse {
+                Ok(Response::new(service::CreateTokenResponse {
                     url: url.to_string(),
                 }))
             }
@@ -59,21 +62,21 @@ impl Mixify for Service {
 
     async fn plan(
         &self,
-        request: tonic::Request<service::SnapshotRequest>,
-    ) -> std::result::Result<tonic::Response<Self::PlanStream>, tonic::Status> {
+        request: Request<service::SnapshotRequest>,
+    ) -> Result<Response<Self::PlanStream>, tonic::Status> {
         todo!()
     }
 
     async fn apply(
         &self,
-        request: tonic::Request<service::SnapshotRequest>,
-    ) -> std::result::Result<tonic::Response<service::OutputResponse>, tonic::Status> {
+        request: Request<service::SnapshotRequest>,
+    ) -> Result<Response<service::OutputResponse>, tonic::Status> {
         todo!()
     }
     async fn sync(
         &self,
-        request: tonic::Request<service::SnapshotRequest>,
-    ) -> std::result::Result<tonic::Response<service::OutputResponse>, tonic::Status> {
+        request: Request<service::SnapshotRequest>,
+    ) -> Result<Response<service::OutputResponse>, tonic::Status> {
         todo!()
     }
 }
@@ -93,6 +96,4 @@ impl Service {
         let me = self.spotify.me().await?;
         Ok((true, me.display_name))
     }
-
-    // async fn create_token(&self) -> Result<String, tonic::Status> {}
 }
