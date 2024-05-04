@@ -14,6 +14,3 @@ target/
 
 # Generated snapshots
 src_snapshots/
-
-# Generated proto files
-src/proto
