@@ -7,8 +7,8 @@ service Mixify {
     rpc SubmitTokenCode(SubmitTokenRequestCode) returns (User) {}
 
     rpc Plan(SnapshotRequest) returns (OutputResponse) {}
-    rpc Apply(SnapshotRequest) returns (OutputResponse) {}
-    rpc Sync(SnapshotRequest) returns (OutputResponse) {}
+    rpc Apply(SnapshotRequest) returns (stream OutputResponse) {}
+    rpc Sync(SnapshotRequest) returns (stream OutputResponse) {}
 }
 
 enum LoginStatus {

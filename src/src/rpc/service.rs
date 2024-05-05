@@ -83,8 +83,6 @@ impl Mixify for Service {
         };
     }
 
-    // type PlanStream = ReceiverStream<Result<service::OutputResponse, tonic::Status>>;
-
     async fn plan(
         &self,
         request: Request<service::SnapshotRequest>,
@@ -92,16 +90,23 @@ impl Mixify for Service {
         self.plan(request).await
     }
 
+    type ApplyStream =
+        tokio_stream::wrappers::ReceiverStream<Result<service::OutputResponse, tonic::Status>>;
+
+    type SyncStream =
+        tokio_stream::wrappers::ReceiverStream<Result<service::OutputResponse, tonic::Status>>;
+
     async fn apply(
         &self,
         _request: Request<service::SnapshotRequest>,
-    ) -> Result<Response<service::OutputResponse>, tonic::Status> {
+    ) -> Result<Response<Self::ApplyStream>, tonic::Status> {
         todo!()
     }
+
     async fn sync(
         &self,
         _request: Request<service::SnapshotRequest>,
-    ) -> Result<Response<service::OutputResponse>, tonic::Status> {
+    ) -> Result<Response<Self::SyncStream>, tonic::Status> {
         todo!()
     }
 }
