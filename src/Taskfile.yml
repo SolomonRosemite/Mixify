@@ -1,7 +1,0 @@
-version: "3"
-
-tasks:
-  view:
-    cmds:
-      - "dot -Tpng snapshots/6/* > target/output.png && feh target/output.png"
-    silent: true
