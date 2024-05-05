@@ -45,6 +45,20 @@
       },
       "args": ["sync", "18"],
       "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "lldb",
+      "request": "launch",
+      "name": "server",
+      "cargo": {
+        "args": ["build", "--bin=server"],
+        "filter": {
+          "name": "server",
+          "kind": "bin"
+        }
+      },
+      "args": [],
+      "cwd": "${workspaceFolder}"
     }
   ]
 }
