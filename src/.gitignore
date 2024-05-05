@@ -14,3 +14,6 @@ target/
 
 # Generated snapshots
 src_snapshots/
+
+# Spotify creds
+.spotify_token_cache.json
