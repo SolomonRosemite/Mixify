@@ -9,10 +9,14 @@ use std::result::Result;
 
 use rspotify::clients::OAuthClient;
 use service::mixify_server::Mixify;
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
 use tonic::{Request, Response};
 
+use crate::rpc::echo;
 use crate::traits::{OptionExtension, ResultExtension};
 use crate::types::Config;
+use crate::{debug, error, info, warn};
 
 #[derive(Debug)]
 pub struct Service {
@@ -90,17 +94,22 @@ impl Mixify for Service {
         self.plan(request).await
     }
 
-    type ApplyStream =
-        tokio_stream::wrappers::ReceiverStream<Result<service::OutputResponse, tonic::Status>>;
-
-    type SyncStream =
-        tokio_stream::wrappers::ReceiverStream<Result<service::OutputResponse, tonic::Status>>;
+    type ApplyStream = ReceiverStream<Result<service::OutputResponse, tonic::Status>>;
+    type SyncStream = ReceiverStream<Result<service::OutputResponse, tonic::Status>>;
 
     async fn apply(
         &self,
         _request: Request<service::SnapshotRequest>,
     ) -> Result<Response<Self::ApplyStream>, tonic::Status> {
-        todo!()
+        let (tx, rx) = mpsc::channel(4);
+        echo::push_context(echo::GRPCOutputResponseSender::new(tx), || {
+            debug!("1");
+            info!("2");
+            warn!("3");
+            error!("4");
+        });
+
+        return Ok(Response::new(ReceiverStream::new(rx)));
     }
 
     async fn sync(

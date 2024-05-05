@@ -1,11 +1,9 @@
 mod constants;
-mod logger;
 mod rpc;
 mod traits;
 mod types;
 
 use dotenv::dotenv;
-use logger::MemoryLogger;
 use rpc::service::{
     service::{mixify_server::MixifyServer, FILE_DESCRIPTOR_SET},
     Service,
@@ -18,11 +16,8 @@ use types::Config;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().expect("Failed to load .env file");
 
-    let memory_logger = MemoryLogger::new();
-    let memory_logger = Box::new(memory_logger);
-
     let mut builder = pretty_env_logger::env_logger::Builder::from_default_env();
-    builder.target(pretty_env_logger::env_logger::Target::Pipe(memory_logger));
+    builder.target(pretty_env_logger::env_logger::Target::Stdout);
     builder.filter(Some("rspotify_http"), log::LevelFilter::Off);
     builder.init();
 
