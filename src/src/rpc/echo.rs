@@ -67,46 +67,51 @@ thread_local! {
     pub static LOGGER: RefCell<Vec<Box<dyn Logger>>> = RefCell::new(vec![]);
 }
 
-#[macro_export]
 macro_rules! error {
     ($($t:tt)*) => {{
         $crate::rpc::echo::LOGGER.with(|logger| {
-            if let Some(logger) = logger.borrow().last() {
-                logger.log(log::Level::Error, format!($($t)*));
+            match logger.borrow().last() {
+                Some(logger) => logger.log(log::Level::Error, format!($($t)*)),
+                None => log::log!(log::Level::Error, "{}", format!($($t)*)),
             }
         })
     }};
 }
 
-#[macro_export]
-macro_rules! warn {
+macro_rules! warning {
     ($($t:tt)*) => {{
         $crate::rpc::echo::LOGGER.with(|logger| {
-            if let Some(logger) = logger.borrow().last() {
-                logger.log(log::Level::Warn, format!($($t)*));
+            match logger.borrow().last() {
+                Some(logger) => logger.log(log::Level::Warn, format!($($t)*)),
+                None => log::log!(log::Level::Warn, "{}", format!($($t)*)),
             }
         })
     }};
 }
 
-#[macro_export]
 macro_rules! info {
     ($($t:tt)*) => {{
         $crate::rpc::echo::LOGGER.with(|logger| {
-            if let Some(logger) = logger.borrow().last() {
-                logger.log(log::Level::Info, format!($($t)*));
+            match logger.borrow().last() {
+                Some(logger) => logger.log(log::Level::Info, format!($($t)*)),
+                None => log::log!(log::Level::Info, "{}", format!($($t)*)),
             }
         })
     }};
 }
 
-#[macro_export]
 macro_rules! debug {
     ($($t:tt)*) => {{
         $crate::rpc::echo::LOGGER.with(|logger| {
-            if let Some(logger) = logger.borrow().last() {
-                logger.log(log::Level::Debug, format!($($t)*));
+            match logger.borrow().last() {
+                Some(logger) => logger.log(log::Level::Debug, format!($($t)*)),
+                None => log::log!(log::Level::Debug, "{}", format!($($t)*)),
             }
         })
     }};
 }
+
+pub(crate) use debug;
+pub(crate) use error;
+pub(crate) use info;
+pub(crate) use warning;

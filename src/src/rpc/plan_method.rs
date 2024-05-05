@@ -35,16 +35,14 @@ impl Service {
             for action in actions {
                 if idx != action.idx {
                     idx = action.idx;
-                    log::info!("------------------------------------");
+                    echo::info!("------------------------------------");
                     output += "------------------------------\n";
                 }
 
-                log::info!("{}", action);
+                echo::info!("{}", action);
                 output += format!("{}\n", action).as_str();
             }
         }
-
-        println!("{}", output);
 
         return Ok(Response::new(service::OutputResponse { output }));
     }
@@ -121,7 +119,7 @@ pub fn create_execution_plan(
         return Err(e);
     }
 
-    log::debug!("nodes: {:?}", nodes);
+    echo::debug!("nodes: {:?}", nodes);
 
     let root = constants::MIXIFY_TEMPORARY_ROOT_NODE_NAME.to_string();
     let idx = graph.add_node(root.clone());

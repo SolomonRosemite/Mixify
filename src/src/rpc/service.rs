@@ -16,7 +16,6 @@ use tonic::{Request, Response};
 use crate::rpc::echo;
 use crate::traits::{OptionExtension, ResultExtension};
 use crate::types::Config;
-use crate::{debug, error, info, warn};
 
 #[derive(Debug)]
 pub struct Service {
@@ -103,10 +102,10 @@ impl Mixify for Service {
     ) -> Result<Response<Self::ApplyStream>, tonic::Status> {
         let (tx, rx) = mpsc::channel(4);
         echo::push_context(echo::GRPCOutputResponseSender::new(tx), || {
-            debug!("1");
-            info!("2");
-            warn!("3");
-            error!("4");
+            echo::debug!("1");
+            echo::info!("2");
+            echo::warning!("3");
+            echo::error!("4");
         });
 
         return Ok(Response::new(ReceiverStream::new(rx)));
