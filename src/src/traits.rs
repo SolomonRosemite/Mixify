@@ -3,6 +3,7 @@ use rspotify::model::FullTrack;
 pub trait ResultExtension<T, E> {
     fn or_error(self, msg: String) -> Result<T, anyhow::Error>;
     fn or_error_str(self, msg: &str) -> Result<T, anyhow::Error>;
+    fn or_status_str(self, msg: &str) -> Result<T, tonic::Status>;
 }
 
 impl<T, E> ResultExtension<T, E> for Result<T, E>
@@ -16,11 +17,16 @@ where
     fn or_error_str(self, msg: &str) -> Result<T, anyhow::Error> {
         self.or_else(|e| Err(anyhow::anyhow!(format!("{}: {}", msg, e))))
     }
+
+    fn or_status_str(self, msg: &str) -> Result<T, tonic::Status> {
+        self.or_else(|e| Err(tonic::Status::internal(format!("{}: {}", msg, e))))
+    }
 }
 
 pub trait OptionExtension<T> {
     fn or_error(self, msg: String) -> Result<T, anyhow::Error>;
     fn or_error_str(self, msg: &str) -> Result<T, anyhow::Error>;
+    fn or_status_str(self, msg: &str) -> Result<T, tonic::Status>;
 }
 
 impl<T> OptionExtension<T> for Option<T> {
@@ -38,6 +44,14 @@ impl<T> OptionExtension<T> for Option<T> {
         }
 
         return Err(anyhow::anyhow!(msg.to_string()));
+    }
+
+    fn or_status_str(self, msg: &str) -> Result<T, tonic::Status> {
+        if let Some(value) = self {
+            return Ok(value);
+        }
+
+        return Err(tonic::Status::internal(msg));
     }
 }
 

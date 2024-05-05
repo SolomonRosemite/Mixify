@@ -3,6 +3,34 @@
 pub struct Empty {}
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
+pub struct User {
+    #[prost(string, optional, tag = "1")]
+    pub display_name: ::core::option::Option<::prost::alloc::string::String>,
+    #[prost(string, tag = "2")]
+    pub id: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct AuthStateResponse {
+    #[prost(enumeration = "LoginStatus", tag = "1")]
+    pub status: i32,
+    #[prost(message, optional, tag = "2")]
+    pub user: ::core::option::Option<User>,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct CreateTokenUrlResponse {
+    #[prost(string, tag = "1")]
+    pub url: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct SubmitTokenRequestCode {
+    #[prost(string, tag = "1")]
+    pub url: ::prost::alloc::string::String,
+}
+#[allow(clippy::derive_partial_eq_without_eq)]
+#[derive(Clone, PartialEq, ::prost::Message)]
 pub struct SnapshotRequest {
     #[prost(string, tag = "1")]
     pub snapshot_content: ::prost::alloc::string::String,
@@ -12,20 +40,6 @@ pub struct SnapshotRequest {
 pub struct OutputResponse {
     #[prost(string, tag = "1")]
     pub output: ::prost::alloc::string::String,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct AuthStateResponse {
-    #[prost(enumeration = "LoginStatus", tag = "1")]
-    pub status: i32,
-    #[prost(string, optional, tag = "2")]
-    pub user_display_name: ::core::option::Option<::prost::alloc::string::String>,
-}
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct CreateTokenResponse {
-    #[prost(string, tag = "1")]
-    pub url: ::prost::alloc::string::String,
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
@@ -160,11 +174,11 @@ pub mod mixify_client {
             req.extensions_mut().insert(GrpcMethod::new("mixify.Mixify", "AuthState"));
             self.inner.unary(req, path, codec).await
         }
-        pub async fn create_token(
+        pub async fn create_token_url(
             &mut self,
             request: impl tonic::IntoRequest<super::Empty>,
         ) -> std::result::Result<
-            tonic::Response<super::CreateTokenResponse>,
+            tonic::Response<super::CreateTokenUrlResponse>,
             tonic::Status,
         > {
             self.inner
@@ -178,10 +192,33 @@ pub mod mixify_client {
                 })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/mixify.Mixify/CreateToken",
+                "/mixify.Mixify/CreateTokenUrl",
             );
             let mut req = request.into_request();
-            req.extensions_mut().insert(GrpcMethod::new("mixify.Mixify", "CreateToken"));
+            req.extensions_mut()
+                .insert(GrpcMethod::new("mixify.Mixify", "CreateTokenUrl"));
+            self.inner.unary(req, path, codec).await
+        }
+        pub async fn submit_token_code(
+            &mut self,
+            request: impl tonic::IntoRequest<super::SubmitTokenRequestCode>,
+        ) -> std::result::Result<tonic::Response<super::User>, tonic::Status> {
+            self.inner
+                .ready()
+                .await
+                .map_err(|e| {
+                    tonic::Status::new(
+                        tonic::Code::Unknown,
+                        format!("Service was not ready: {}", e.into()),
+                    )
+                })?;
+            let codec = tonic::codec::ProstCodec::default();
+            let path = http::uri::PathAndQuery::from_static(
+                "/mixify.Mixify/SubmitTokenCode",
+            );
+            let mut req = request.into_request();
+            req.extensions_mut()
+                .insert(GrpcMethod::new("mixify.Mixify", "SubmitTokenCode"));
             self.inner.unary(req, path, codec).await
         }
         pub async fn plan(
@@ -260,13 +297,17 @@ pub mod mixify_server {
             tonic::Response<super::AuthStateResponse>,
             tonic::Status,
         >;
-        async fn create_token(
+        async fn create_token_url(
             &self,
             request: tonic::Request<super::Empty>,
         ) -> std::result::Result<
-            tonic::Response<super::CreateTokenResponse>,
+            tonic::Response<super::CreateTokenUrlResponse>,
             tonic::Status,
         >;
+        async fn submit_token_code(
+            &self,
+            request: tonic::Request<super::SubmitTokenRequestCode>,
+        ) -> std::result::Result<tonic::Response<super::User>, tonic::Status>;
         /// Server streaming response type for the Plan method.
         type PlanStream: tonic::codegen::tokio_stream::Stream<
                 Item = std::result::Result<super::OutputResponse, tonic::Status>,
@@ -409,12 +450,12 @@ pub mod mixify_server {
                     };
                     Box::pin(fut)
                 }
-                "/mixify.Mixify/CreateToken" => {
+                "/mixify.Mixify/CreateTokenUrl" => {
                     #[allow(non_camel_case_types)]
-                    struct CreateTokenSvc<T: Mixify>(pub Arc<T>);
+                    struct CreateTokenUrlSvc<T: Mixify>(pub Arc<T>);
                     impl<T: Mixify> tonic::server::UnaryService<super::Empty>
-                    for CreateTokenSvc<T> {
-                        type Response = super::CreateTokenResponse;
+                    for CreateTokenUrlSvc<T> {
+                        type Response = super::CreateTokenUrlResponse;
                         type Future = BoxFuture<
                             tonic::Response<Self::Response>,
                             tonic::Status,
@@ -425,7 +466,7 @@ pub mod mixify_server {
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
                             let fut = async move {
-                                <T as Mixify>::create_token(&inner, request).await
+                                <T as Mixify>::create_token_url(&inner, request).await
                             };
                             Box::pin(fut)
                         }
@@ -437,7 +478,53 @@ pub mod mixify_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = CreateTokenSvc(inner);
+                        let method = CreateTokenUrlSvc(inner);
+                        let codec = tonic::codec::ProstCodec::default();
+                        let mut grpc = tonic::server::Grpc::new(codec)
+                            .apply_compression_config(
+                                accept_compression_encodings,
+                                send_compression_encodings,
+                            )
+                            .apply_max_message_size_config(
+                                max_decoding_message_size,
+                                max_encoding_message_size,
+                            );
+                        let res = grpc.unary(method, req).await;
+                        Ok(res)
+                    };
+                    Box::pin(fut)
+                }
+                "/mixify.Mixify/SubmitTokenCode" => {
+                    #[allow(non_camel_case_types)]
+                    struct SubmitTokenCodeSvc<T: Mixify>(pub Arc<T>);
+                    impl<
+                        T: Mixify,
+                    > tonic::server::UnaryService<super::SubmitTokenRequestCode>
+                    for SubmitTokenCodeSvc<T> {
+                        type Response = super::User;
+                        type Future = BoxFuture<
+                            tonic::Response<Self::Response>,
+                            tonic::Status,
+                        >;
+                        fn call(
+                            &mut self,
+                            request: tonic::Request<super::SubmitTokenRequestCode>,
+                        ) -> Self::Future {
+                            let inner = Arc::clone(&self.0);
+                            let fut = async move {
+                                <T as Mixify>::submit_token_code(&inner, request).await
+                            };
+                            Box::pin(fut)
+                        }
+                    }
+                    let accept_compression_encodings = self.accept_compression_encodings;
+                    let send_compression_encodings = self.send_compression_encodings;
+                    let max_decoding_message_size = self.max_decoding_message_size;
+                    let max_encoding_message_size = self.max_encoding_message_size;
+                    let inner = self.inner.clone();
+                    let fut = async move {
+                        let inner = inner.0;
+                        let method = SubmitTokenCodeSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

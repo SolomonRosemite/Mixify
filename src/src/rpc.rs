@@ -7,11 +7,12 @@ pub mod service {
 
 use std::result::Result;
 
-use rspotify::clients::OAuthClient;
+use rspotify::clients::{BaseClient, OAuthClient};
 use service::mixify_server::Mixify;
 use tonic::{Request, Response};
 
-use crate::{traits::OptionExtension, types::Config};
+use crate::traits::{OptionExtension, ResultExtension};
+use crate::types::Config;
 
 #[derive(Debug)]
 pub struct Service {
@@ -25,31 +26,20 @@ impl Mixify for Service {
         &self,
         _: Request<service::Empty>,
     ) -> Result<Response<service::AuthStateResponse>, tonic::Status> {
-        let state = self.auth_state().await;
-
-        if state.is_err() || !state.as_ref().unwrap().0 {
-            return Ok(Response::new(service::AuthStateResponse {
-                status: service::LoginStatus::NotLoggedIn.into(),
-                user_display_name: None,
-            }));
+        match self.auth_state().await {
+            Ok(auth_state) => Ok(Response::new(auth_state)),
+            Err(err) => Err(tonic::Status::internal(err.to_string())),
         }
-
-        Ok(Response::new(service::AuthStateResponse {
-            status: service::LoginStatus::LoggedIn.into(),
-            user_display_name: state.unwrap().1,
-        }))
     }
 
-    async fn create_token(
+    async fn create_token_url(
         &self,
         _: Request<service::Empty>,
-    ) -> Result<Response<service::CreateTokenResponse>, tonic::Status> {
+    ) -> Result<Response<service::CreateTokenUrlResponse>, tonic::Status> {
         return match self.spotify.get_authorize_url(false) {
             Ok(url) => {
-                log::info!("Created token auth url: {}", url);
-                Ok(Response::new(service::CreateTokenResponse {
-                    url: url.to_string(),
-                }))
+                log::info!("Created token auth url: {:?}", url);
+                Ok(Response::new(service::CreateTokenUrlResponse { url }))
             }
             Err(err) => {
                 log::error!("Failed to create token: {}", err);
@@ -58,42 +48,70 @@ impl Mixify for Service {
         };
     }
 
+    async fn submit_token_code(
+        &self,
+        request: tonic::Request<service::SubmitTokenRequestCode>,
+    ) -> std::result::Result<tonic::Response<service::User>, tonic::Status> {
+        let code = self
+            .spotify
+            .parse_response_code(&request.into_inner().url)
+            .or_status_str("failed to parse code from redirect url")?;
+
+        return match self.spotify.request_token(&code).await {
+            Ok(_) => {
+                let me =
+                    self.spotify.me().await.or_status_str(
+                        "congratulations. you made the impossible, possible. you successfully authenticated. but failed to fetch user data. this should never happen",
+                    )?;
+
+                return Ok(Response::new(service::User {
+                    id: me.id.to_string(),
+                    display_name: me.display_name,
+                }));
+            }
+            Err(err) => Err(tonic::Status::internal(err.to_string())),
+        };
+    }
+
     type PlanStream = tonic::codec::Streaming<service::OutputResponse>;
 
     async fn plan(
         &self,
-        request: Request<service::SnapshotRequest>,
+        _request: Request<service::SnapshotRequest>,
     ) -> Result<Response<Self::PlanStream>, tonic::Status> {
         todo!()
     }
 
     async fn apply(
         &self,
-        request: Request<service::SnapshotRequest>,
+        _request: Request<service::SnapshotRequest>,
     ) -> Result<Response<service::OutputResponse>, tonic::Status> {
         todo!()
     }
     async fn sync(
         &self,
-        request: Request<service::SnapshotRequest>,
+        _request: Request<service::SnapshotRequest>,
     ) -> Result<Response<service::OutputResponse>, tonic::Status> {
         todo!()
     }
 }
 
 impl Service {
-    async fn auth_state(&self) -> Result<(bool, Option<String>), anyhow::Error> {
-        let token = self.spotify.token.clone();
-        let mutex = token
-            .lock()
-            .await
-            .map_err(|_| anyhow::anyhow!("Failed to get token"))?;
-        let token = mutex.clone().or_error_str("Failed to get token")?;
-        if token.is_expired() {
-            return Ok((false, None));
+    async fn auth_state(&self) -> Result<service::AuthStateResponse, anyhow::Error> {
+        if let Ok(me) = self.spotify.me().await {
+            return Ok(service::AuthStateResponse {
+                status: service::LoginStatus::LoggedIn.into(),
+                user: Some(service::User {
+                    id: me.id.to_string(),
+                    display_name: me.display_name,
+                }),
+            });
         }
 
-        let me = self.spotify.me().await?;
-        Ok((true, me.display_name))
+
+        return Ok(service::AuthStateResponse {
+            status: service::LoginStatus::NotLoggedIn.into(),
+            user: None,
+        });
     }
 }

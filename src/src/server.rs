@@ -9,6 +9,7 @@ use rpc::{
     service::{mixify_server::MixifyServer, FILE_DESCRIPTOR_SET},
     Service,
 };
+use rspotify::clients::{BaseClient, OAuthClient};
 use tonic::transport::Server;
 use traits::ResultExtension;
 use types::Config;
@@ -26,9 +27,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     builder.init();
 
     let config = parse_config().or_error_str("Following error occured when parsing config")?;
-    let mut service = create_service(config);
+    let service = create_service(config).await;
 
-    let addr = "[::1]:50051".parse()?;
+    let addr = "127.0.0.1:50051".parse()?;
 
     let server_reflection = tonic_reflection::server::Builder::configure()
         .register_encoded_file_descriptor_set(FILE_DESCRIPTOR_SET)
@@ -44,7 +45,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn create_service(config: Config) -> Service {
+async fn create_service(config: Config) -> Service {
     let creds = rspotify::Credentials::from_env().unwrap();
     let oauth = rspotify::OAuth {
         redirect_uri: "http://localhost:8080/callback".to_string(),
@@ -61,7 +62,18 @@ fn create_service(config: Config) -> Service {
         ..Default::default()
     };
 
-    let spotify = rspotify::AuthCodeSpotify::new(creds, oauth);
+    let token =
+        rspotify::Token::from_cache(rspotify::DEFAULT_CACHE_PATH).unwrap_or(rspotify::Token {
+            ..Default::default()
+        });
+
+    let c = rspotify::Config {
+        token_cached: true,
+        token_refreshing: true,
+        ..Default::default()
+    };
+
+    let spotify = rspotify::AuthCodeSpotify::from_token_with_config(token, creds, oauth, c);
     return Service { spotify, config };
 }
 
