@@ -3,6 +3,7 @@ mod args;
 mod constants;
 mod new_command;
 mod plan_command;
+mod rpc;
 mod traits;
 mod types;
 

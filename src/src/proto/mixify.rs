@@ -224,10 +224,7 @@ pub mod mixify_client {
         pub async fn plan(
             &mut self,
             request: impl tonic::IntoRequest<super::SnapshotRequest>,
-        ) -> std::result::Result<
-            tonic::Response<tonic::codec::Streaming<super::OutputResponse>>,
-            tonic::Status,
-        > {
+        ) -> std::result::Result<tonic::Response<super::OutputResponse>, tonic::Status> {
             self.inner
                 .ready()
                 .await
@@ -241,7 +238,7 @@ pub mod mixify_client {
             let path = http::uri::PathAndQuery::from_static("/mixify.Mixify/Plan");
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new("mixify.Mixify", "Plan"));
-            self.inner.server_streaming(req, path, codec).await
+            self.inner.unary(req, path, codec).await
         }
         pub async fn apply(
             &mut self,
@@ -308,16 +305,10 @@ pub mod mixify_server {
             &self,
             request: tonic::Request<super::SubmitTokenRequestCode>,
         ) -> std::result::Result<tonic::Response<super::User>, tonic::Status>;
-        /// Server streaming response type for the Plan method.
-        type PlanStream: tonic::codegen::tokio_stream::Stream<
-                Item = std::result::Result<super::OutputResponse, tonic::Status>,
-            >
-            + Send
-            + 'static;
         async fn plan(
             &self,
             request: tonic::Request<super::SnapshotRequest>,
-        ) -> std::result::Result<tonic::Response<Self::PlanStream>, tonic::Status>;
+        ) -> std::result::Result<tonic::Response<super::OutputResponse>, tonic::Status>;
         async fn apply(
             &self,
             request: tonic::Request<super::SnapshotRequest>,
@@ -543,14 +534,11 @@ pub mod mixify_server {
                 "/mixify.Mixify/Plan" => {
                     #[allow(non_camel_case_types)]
                     struct PlanSvc<T: Mixify>(pub Arc<T>);
-                    impl<
-                        T: Mixify,
-                    > tonic::server::ServerStreamingService<super::SnapshotRequest>
+                    impl<T: Mixify> tonic::server::UnaryService<super::SnapshotRequest>
                     for PlanSvc<T> {
                         type Response = super::OutputResponse;
-                        type ResponseStream = T::PlanStream;
                         type Future = BoxFuture<
-                            tonic::Response<Self::ResponseStream>,
+                            tonic::Response<Self::Response>,
                             tonic::Status,
                         >;
                         fn call(
@@ -582,7 +570,7 @@ pub mod mixify_server {
                                 max_decoding_message_size,
                                 max_encoding_message_size,
                             );
-                        let res = grpc.server_streaming(method, req).await;
+                        let res = grpc.unary(method, req).await;
                         Ok(res)
                     };
                     Box::pin(fut)

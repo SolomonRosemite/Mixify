@@ -1,5 +1,5 @@
 pub mod service {
-    include!("proto/mixify.rs");
+    include!("../proto/mixify.rs");
 
     pub(crate) const FILE_DESCRIPTOR_SET: &[u8] =
         tonic::include_file_descriptor_set!("service_descriptor");
@@ -7,7 +7,7 @@ pub mod service {
 
 use std::result::Result;
 
-use rspotify::clients::{BaseClient, OAuthClient};
+use rspotify::clients::OAuthClient;
 use service::mixify_server::Mixify;
 use tonic::{Request, Response};
 
@@ -26,10 +26,20 @@ impl Mixify for Service {
         &self,
         _: Request<service::Empty>,
     ) -> Result<Response<service::AuthStateResponse>, tonic::Status> {
-        match self.auth_state().await {
-            Ok(auth_state) => Ok(Response::new(auth_state)),
-            Err(err) => Err(tonic::Status::internal(err.to_string())),
+        if let Ok(me) = self.spotify.me().await {
+            return Ok(Response::new(service::AuthStateResponse {
+                status: service::LoginStatus::LoggedIn.into(),
+                user: Some(service::User {
+                    id: me.id.to_string(),
+                    display_name: me.display_name,
+                }),
+            }));
         }
+
+        return Ok(Response::new(service::AuthStateResponse {
+            status: service::LoginStatus::NotLoggedIn.into(),
+            user: None,
+        }));
     }
 
     async fn create_token_url(
@@ -61,7 +71,7 @@ impl Mixify for Service {
             Ok(_) => {
                 let me =
                     self.spotify.me().await.or_status_str(
-                        "congratulations. you made the impossible, possible. you successfully authenticated. but failed to fetch user data. this should never happen",
+                        "congratulations! you made the impossible possible. you successfully authenticated, but failed to fetch user data. this should never happen",
                     )?;
 
                 return Ok(Response::new(service::User {
@@ -73,13 +83,13 @@ impl Mixify for Service {
         };
     }
 
-    type PlanStream = tonic::codec::Streaming<service::OutputResponse>;
+    // type PlanStream = ReceiverStream<Result<service::OutputResponse, tonic::Status>>;
 
     async fn plan(
         &self,
-        _request: Request<service::SnapshotRequest>,
-    ) -> Result<Response<Self::PlanStream>, tonic::Status> {
-        todo!()
+        request: Request<service::SnapshotRequest>,
+    ) -> Result<Response<service::OutputResponse>, tonic::Status> {
+        self.plan(request).await
     }
 
     async fn apply(
@@ -93,25 +103,5 @@ impl Mixify for Service {
         _request: Request<service::SnapshotRequest>,
     ) -> Result<Response<service::OutputResponse>, tonic::Status> {
         todo!()
-    }
-}
-
-impl Service {
-    async fn auth_state(&self) -> Result<service::AuthStateResponse, anyhow::Error> {
-        if let Ok(me) = self.spotify.me().await {
-            return Ok(service::AuthStateResponse {
-                status: service::LoginStatus::LoggedIn.into(),
-                user: Some(service::User {
-                    id: me.id.to_string(),
-                    display_name: me.display_name,
-                }),
-            });
-        }
-
-
-        return Ok(service::AuthStateResponse {
-            status: service::LoginStatus::NotLoggedIn.into(),
-            user: None,
-        });
     }
 }

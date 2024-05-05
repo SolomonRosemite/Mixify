@@ -1,3 +1,4 @@
+mod constants;
 mod logger;
 mod rpc;
 mod traits;
@@ -5,11 +6,10 @@ mod types;
 
 use dotenv::dotenv;
 use logger::MemoryLogger;
-use rpc::{
+use rpc::service::{
     service::{mixify_server::MixifyServer, FILE_DESCRIPTOR_SET},
     Service,
 };
-use rspotify::clients::{BaseClient, OAuthClient};
 use tonic::transport::Server;
 use traits::ResultExtension;
 use types::Config;
