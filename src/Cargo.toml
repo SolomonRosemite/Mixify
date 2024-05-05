@@ -31,6 +31,7 @@ tonic = "0.10.2"
 tonic-build = "0.10.2"
 tonic-reflection = "0.10.2"
 lazy_static = "1.4.0"
+tokio-stream = "0.1.15"
 
 [build-dependencies]
 tonic-build = "0.10.2"
