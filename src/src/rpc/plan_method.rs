@@ -1,4 +1,6 @@
-use tonic::{Request, Response};
+use std::time::Duration;
+
+use tonic::Request;
 
 use crate::{
     constants,
@@ -23,28 +25,27 @@ impl Service {
     pub async fn plan(
         &self,
         request: Request<service::SnapshotRequest>,
-    ) -> Result<Response<service::OutputResponse>, tonic::Status> {
+    ) -> Result<(), tonic::Status> {
         let gv = graphviz_dot_parser::parse(&request.into_inner().snapshot_content)
             .or_status_str("failed to parse graph")?;
+        // TODO: Just for testing. rm later
+        tokio::time::sleep(Duration::from_millis(2000)).await;
         let (res, _) =
             create_execution_plan(&gv).or_status_str("failed to create plan execution plan")?;
 
-        let mut output = String::new();
         for actions in &res {
             let mut idx = 0;
             for action in actions {
                 if idx != action.idx {
                     idx = action.idx;
                     echo::info!("------------------------------------");
-                    output += "------------------------------\n";
                 }
 
                 echo::info!("{}", action);
-                output += format!("{}\n", action).as_str();
             }
         }
 
-        return Ok(Response::new(service::OutputResponse { output }));
+        return Ok(());
     }
 }
 

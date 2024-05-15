@@ -1,3 +1,4 @@
+use futures_util::Future;
 use std::cell::RefCell;
 use tokio::sync::mpsc;
 
@@ -34,17 +35,16 @@ impl Logger for GRPCOutputResponseSender {
     }
 }
 
-pub fn push_context<L, F, R>(l: L, f: F) -> R
+pub async fn push_context<L, F, R>(l: L, f: impl FnOnce() -> F) -> R
 where
     L: Logger + 'static,
-    F: FnOnce() -> R,
+    F: Future<Output = R>,
 {
     LOGGER.with(|logger| logger.borrow_mut().push(Box::new(l)));
-    let r = f();
+    let r = f().await;
     LOGGER.with(|logger| logger.borrow_mut().pop());
     r
 }
-
 fn format_log_message_as_string(level: log::Level, message: &String) -> String {
     return format_log_message(
         &log::Record::builder()

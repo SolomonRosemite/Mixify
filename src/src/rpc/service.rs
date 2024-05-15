@@ -6,7 +6,9 @@ pub mod service {
 }
 
 use std::result::Result;
+use std::time::Duration;
 
+use futures_util::StreamExt;
 use rspotify::clients::OAuthClient;
 use service::mixify_server::Mixify;
 use tokio::sync::mpsc;
@@ -17,7 +19,7 @@ use crate::rpc::echo;
 use crate::traits::{OptionExtension, ResultExtension};
 use crate::types::Config;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Service {
     pub spotify: rspotify::AuthCodeSpotify,
     pub config: Config,
@@ -86,11 +88,30 @@ impl Mixify for Service {
         };
     }
 
+    type PlanStream = ReceiverStream<Result<service::OutputResponse, tonic::Status>>;
+
     async fn plan(
         &self,
         request: Request<service::SnapshotRequest>,
-    ) -> Result<Response<service::OutputResponse>, tonic::Status> {
-        self.plan(request).await
+    ) -> Result<Response<Self::PlanStream>, tonic::Status> {
+        let (tx, rx) = mpsc::channel(60);
+        let this = self.clone();
+
+        tokio::spawn(async move {
+            let x = echo::push_context(echo::GRPCOutputResponseSender::new(tx.clone()), || async {
+                echo::info!("1");
+                let y = this.plan(request).await;
+                echo::info!("2");
+                return y;
+            });
+
+            if let Err(e) = x.await {
+                let _ = tx.send(Err(e)).await;
+            }
+        });
+
+        echo::error!("hhhhhhhhhhhhhhhhh");
+        return Ok(Response::new(ReceiverStream::new(rx)));
     }
 
     type ApplyStream = ReceiverStream<Result<service::OutputResponse, tonic::Status>>;
@@ -101,12 +122,12 @@ impl Mixify for Service {
         _request: Request<service::SnapshotRequest>,
     ) -> Result<Response<Self::ApplyStream>, tonic::Status> {
         let (tx, rx) = mpsc::channel(4);
-        echo::push_context(echo::GRPCOutputResponseSender::new(tx), || {
-            echo::debug!("1");
-            echo::info!("2");
-            echo::warning!("3");
-            echo::error!("4");
-        });
+        // echo::push_context(echo::GRPCOutputResponseSender::new(tx), || {
+        //     echo::debug!("1");
+        //     echo::info!("2");
+        //     echo::warning!("3");
+        //     echo::error!("4");
+        // });
 
         return Ok(Response::new(ReceiverStream::new(rx)));
     }

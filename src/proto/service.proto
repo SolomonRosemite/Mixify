@@ -6,7 +6,7 @@ service Mixify {
     rpc CreateTokenUrl(Empty) returns (CreateTokenUrlResponse) {}
     rpc SubmitTokenCode(SubmitTokenRequestCode) returns (User) {}
 
-    rpc Plan(SnapshotRequest) returns (OutputResponse) {}
+    rpc Plan(SnapshotRequest) returns (stream OutputResponse) {}
     rpc Apply(SnapshotRequest) returns (stream OutputResponse) {}
     rpc Sync(SnapshotRequest) returns (stream OutputResponse) {}
 }

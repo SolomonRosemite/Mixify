@@ -101,7 +101,7 @@ impl crate::types::TrackTuple {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Config {
     pub allow_removing_songs: bool,
     pub mixstack_suffix: String,
